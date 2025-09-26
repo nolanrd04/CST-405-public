@@ -1,0 +1,326 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include "codegen.h"
+#include "symtab.h"
+
+FILE* output;
+int tempReg = 0;
+
+int getNextTemp() {
+    int reg = tempReg;
+    tempReg = (tempReg + 1) % 8;  // Wrap around after $t7
+    return reg;
+}
+
+void genExpr(ASTNode* node) {
+    if (!node) return;
+    
+    switch(node->type) {
+        case NODE_NUM:
+            fprintf(output, "    li $t%d, %d\n", getNextTemp(), node->data.num);
+            break;
+            
+        case NODE_VAR: {
+            int offset = getVarOffset(node->data.name);
+            if (offset == -1) {
+                fprintf(stderr, "Error: Variable %s not declared\n", node->data.name);
+                exit(1);
+            }
+            fprintf(output, "    lw $t%d, %d($sp)\n", getNextTemp(), offset);
+            break;
+        }
+        
+        case NODE_BINOP:
+            genExpr(node->data.binop.left);
+            int leftReg = tempReg - 1;
+            genExpr(node->data.binop.right);
+            int rightReg = tempReg - 1;
+
+            if (node->data.binop.op == '+') {
+                fprintf(output, "    add $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+            } else if (node->data.binop.op == '-') {
+                fprintf(output, "    sub $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+            } else {
+                fprintf(stderr, "Error: unsupported binary op '%c'\n", node->data.binop.op);
+                exit(1);
+            }
+
+            tempReg = leftReg + 1;
+            break;
+        
+        case NODE_ARRAY_ACCESS: {
+            /* index -> temp (genExpr leaves result in last temp) */
+            genExpr(node->data.array_access.index);
+            int idxReg = tempReg - 1;         /* index is in $t{idxReg} */
+
+            /* allocate temps for base address, element addr, and result */
+            int baseReg = getNextTemp();
+            int addrReg = getNextTemp();
+            int resReg  = getNextTemp();
+
+            int baseOffset = getVarOffset(node->data.array_access.name);
+            if (baseOffset == -1) {
+                fprintf(stderr, "Error: Array %s not declared\n", node->data.array_access.name);
+                exit(1);
+            }
+
+            /* scale index (in-place) */
+            fprintf(output, "    sll  $t%d, $t%d, 2      # idx * 4\n", idxReg, idxReg);
+
+            /* compute base address and element address using addiu/addu */
+            fprintf(output, "    addiu $t%d, $sp, %d   # base of %s\n",
+                    baseReg, baseOffset, node->data.array_access.name);
+            fprintf(output, "    addu  $t%d, $t%d, $t%d  # element address\n",
+                    addrReg, baseReg, idxReg);
+
+            /* load element into result temp */
+            fprintf(output, "    lw    $t%d, 0($t%d)     # load array element\n",
+                    resReg, addrReg);
+
+            /* leave result in last temp (tempReg already advanced) */
+            break;
+        }
+
+        case NODE_ARRAY_ASSIGN: 
+        {
+            if (!isArrayVar(node->data.array_assign.name)) {
+                fprintf(stderr, "Error: %s is not an array\n", node->data.array_assign.name);
+                exit(1);
+            }
+
+            /* evaluate index then value (value last -> in last temp) */
+            genExpr(node->data.array_assign.index);
+            int idxReg = tempReg - 1;
+
+            genExpr(node->data.array_assign.value);
+            int valReg = tempReg - 1;
+
+            /* allocate separate temps for base address and element address */
+            int baseReg = getNextTemp();
+            int addrReg = getNextTemp();
+
+            int baseOffset = getVarOffset(node->data.array_assign.name);
+            if (baseOffset == -1) {
+                fprintf(stderr, "Error: Array %s not declared\n", node->data.array_assign.name);
+                exit(1);
+            }
+
+            /* scale index, compute address, store value; use addiu/addu */
+            fprintf(output, "    sll  $t%d, $t%d, 2      # idx * 4\n", idxReg, idxReg);
+            fprintf(output, "    addiu $t%d, $sp, %d   # base of %s\n",
+                    baseReg, baseOffset, node->data.array_assign.name);
+            fprintf(output, "    addu  $t%d, $t%d, $t%d  # element address\n",
+                    addrReg, baseReg, idxReg);
+            fprintf(output, "    sw    $t%d, 0($t%d)     # store value\n",
+                    valReg, addrReg);
+
+            tempReg = 0;
+            break;
+        }
+
+
+        default:
+            break;
+    }
+}
+
+void genStmt(ASTNode* node) {
+    if (!node) return;
+    
+    switch(node->type) {
+        case NODE_DECL: {
+            int offset = addVar(node->data.name);
+            if (offset == -1) {
+                fprintf(stderr, "Error: Variable %s already declared\n", node->data.name);
+                exit(1);
+            }
+            fprintf(output, "    # Declared %s at offset %d\n", node->data.name, offset);
+            break;
+        }
+        case NODE_DECL_ASSIGN: {
+            // Declare the variable
+            int offset = addVar(node->data.declAssign.id);
+            if (offset == -1) {
+                fprintf(stderr, "Error: Variable %s already declared\n", node->data.declAssign.id);
+                exit(1);
+            }
+            fprintf(output, "    # Declared %s at offset %d\n", node->data.declAssign.id, offset);
+            // Generate code for the initializer expression
+            genExpr(node->data.declAssign.expr);
+            // Store the result in the variable's stack slot
+            fprintf(output, "    sw $t%d, %d($sp)\n", tempReg - 1, offset);
+            tempReg = 0;
+            break;
+        }
+        case NODE_ASSIGN: {
+            int offset = getVarOffset(node->data.assign.var);
+            if (offset == -1) {
+                fprintf(stderr, "Error: Variable %s not declared\n", node->data.assign.var);
+                exit(1);
+            }
+            genExpr(node->data.assign.value);
+            fprintf(output, "    sw $t%d, %d($sp)\n", tempReg - 1, offset);
+            tempReg = 0;
+            break;
+        }
+        
+        case NODE_PRINT:
+            genExpr(node->data.expr);
+            fprintf(output, "    # Print integer\n");
+            fprintf(output, "    move $a0, $t%d\n", tempReg - 1);
+            fprintf(output, "    li $v0, 1\n");
+            fprintf(output, "    syscall\n");
+            fprintf(output, "    # Print newline\n");
+            fprintf(output, "    li $v0, 11\n");
+            fprintf(output, "    li $a0, 10\n");
+            fprintf(output, "    syscall\n");
+            tempReg = 0;
+            break;
+            
+        case NODE_STMT_LIST:
+            genStmt(node->data.stmtlist.stmt);
+            genStmt(node->data.stmtlist.next);
+            break;
+            
+        case NODE_ARRAY_DECL:
+        {
+            int offset = addArrayVar(node->data.array_decl.name, node->data.array_decl.size);
+            if (offset == -1) {
+                fprintf(stderr, "Error: Array %s already declared\n", node->data.array_decl.name);
+                exit(1);
+            }
+            fprintf(output, "    # Declared array %s of size %d at offset %d\n", node->data.array_decl.name, node->data.array_decl.size, offset);
+            break;
+        }
+
+        case NODE_ARRAY_ASSIGN:
+        {
+            if (!isArrayVar(node->data.array_assign.name)) {
+                fprintf(stderr, "Error: %s is not an array\n", node->data.array_assign.name);
+                exit(1);
+            }
+
+            /* evaluate index then value (value last -> in last temp) */
+            genExpr(node->data.array_assign.index);
+            int idxReg = tempReg - 1;
+
+            genExpr(node->data.array_assign.value);
+            int valReg = tempReg - 1;
+
+            /* allocate separate temps for base address and element address */
+            int baseReg = getNextTemp();
+            int addrReg = getNextTemp();
+
+            int baseOffset = getVarOffset(node->data.array_assign.name);
+            if (baseOffset == -1) {
+                fprintf(stderr, "Error: Array %s not declared\n", node->data.array_assign.name);
+                exit(1);
+            }
+
+            /* scale index, compute address, store value; use addiu/addu */
+            fprintf(output, "    sll  $t%d, $t%d, 2      # idx * 4\n", idxReg, idxReg);
+            fprintf(output, "    addiu $t%d, $sp, %d   # base of %s\n",
+                    baseReg, baseOffset, node->data.array_assign.name);
+            fprintf(output, "    addu  $t%d, $t%d, $t%d  # element address\n",
+                    addrReg, baseReg, idxReg);
+            fprintf(output, "    sw    $t%d, 0($t%d)     # store value\n",
+                    valReg, addrReg);
+
+            tempReg = 0;
+            break;
+        }
+
+
+// Fixed NODE_ARRAY_DECL_ASSIGN case
+case NODE_ARRAY_DECL_ASSIGN:
+{ 
+    ASTNode* init = node->data.array_decl_assign.initList;
+    int size = node->data.array_decl_assign.size;
+
+    // First, count elements and build a forward array
+    ASTNode* expressions[100]; // Assume max 100 elements
+    int count = 0;
+
+    // Traverse list and extract actual expressions
+    ASTNode* cur = init;
+    while (cur != NULL && count < 100) {
+        if (cur->type == NODE_STMT_LIST) {
+            // Get the expression from this list node
+            ASTNode* expr = cur->data.stmtlist.stmt;
+            if (expr != NULL) {
+                expressions[count++] = expr;
+            }
+            cur = cur->data.stmtlist.next;
+        } else {
+            // This is a direct expression, not wrapped in list
+            expressions[count++] = cur;
+            break;
+        }
+    }
+
+    if (size == 0) {
+        size = count; // Infer size
+    }
+
+    int offset = addArrayVar(node->data.array_decl_assign.name, size);
+    if (offset == -1) { 
+        fprintf(stderr, "Error: Variable %s already declared\n", node->data.array_decl_assign.name); 
+        exit(1); 
+    }
+
+    // Store the actual initializer values - SIMPLIFIED APPROACH
+    for (int i = 0; i < count && i < size; i++) {
+        // Reset temp register counter for each iteration
+        tempReg = 0;
+        
+        // Generate expression into $t0
+        genExpr(expressions[count - 1 - i]);
+        
+        // Use fixed registers for address calculation
+        fprintf(output, "    # Storing value at array position %d\n", i);
+        fprintf(output, "    addiu $t1, $sp, %d      # base address\n", offset);
+        fprintf(output, "    li    $t2, %d           # offset = %d * 4\n", i * 4, i);
+        fprintf(output, "    addu  $t3, $t1, $t2    # element address\n");
+        fprintf(output, "    sw    $t0, 0($t3)      # store value\n");
+    }
+    
+    tempReg = 0; // Reset for next statement
+    break;
+}
+
+        default:
+            break;
+    }
+}
+
+void generateMIPS(ASTNode* root, const char* filename) {
+    output = fopen(filename, "w");
+    if (!output) {
+        fprintf(stderr, "Cannot open output file %s\n", filename);
+        exit(1);
+    }
+    
+    // Initialize symbol table
+    initSymTab();
+    
+    // MIPS program header
+    fprintf(output, ".data\n");
+    fprintf(output, "\n.text\n");
+    fprintf(output, ".globl main\n");
+    fprintf(output, "main:\n");
+    
+    // Allocate stack space (max 100 variables * 4 bytes)
+    fprintf(output, "    # Allocate stack space\n");
+    fprintf(output, "    addi $sp, $sp, -400\n\n");
+    
+    // Generate code for statements
+    genStmt(root);
+    
+    // Program exit
+    fprintf(output, "\n    # Exit program\n");
+    fprintf(output, "    addi $sp, $sp, 400\n");
+    fprintf(output, "    li $v0, 10\n");
+    fprintf(output, "    syscall\n");
+    
+    fclose(output);
+}
