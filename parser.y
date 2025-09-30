@@ -35,7 +35,7 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 %token INT PRINT        /* Keywords have no semantic value */
 
 /* NON-TERMINAL TYPES - Define what type each grammar rule returns */
-%type <node> program stmt_list stmt decl assign expr print_stmt arrayExpr
+%type <node> program stmt_list stmt decl assign declAssign expr print_stmt arrayExpr arrayExpr2D
 
 /* OPERATOR PRECEDENCE AND ASSOCIATIVITY */
 %left '+'  /* Addition is left-associative: a+b+c = (a+b)+c */
@@ -69,6 +69,7 @@ stmt_list:
 stmt:
     decl        /* Variable declaration */
     | assign    /* Assignment statement */
+    | declAssign /* Declaration with assignment */
     | print_stmt /* Print statement */
     ;
 
@@ -80,35 +81,20 @@ decl:
         $$ = createDecl($2);  /* $2 is the ID token's string value; stored in the symbol table; returns into $$, which is a pointer to a sub tree. */
         free($2);             /* Free the string copy from scanner */
     }
-    /* to add onto the decl, like if you actually want to asssign, do the following: */
-    /* here is what I am adding: */
 
-    /* ##### DONE ##### */
-    | INT ID { 
-    } '=' expr ';'
-    {
-        $$ = createDeclAssign("int", $2, $5);
-        free($2);
-    }
-
+    /* ##### ONE DIMENSIONAL ARRAYS ##### */
     /* array element of length NUM */
     | INT ID '[' NUM ']' ';'
     {
-        $$ = createArrayDeclOfLength("int", $2, $4);
+        $$ = createArrayDeclOfLength("int", $2, $4);/* done */
         free($2);
     }
 
-    /*array of length num with assignment */
-    | INT ID '[' NUM ']' '=' '{' arrayExpr '}' ';'
+    /* ##### TWO DIMENSIONAL ARRAYS ##### */
+    /* 2D array element of length NUM x NUM */
+    | INT ID '[' NUM ']' '[' NUM ']' ';'
     {
-        $$ = createArrayAssign("int", $2, $4, $8);
-        free($2);
-    }
-
-    /* array element of unknown length with assignment */
-    | INT ID '[' ']' '=' '{' arrayExpr '}' ';'
-    {
-        $$ = createArrayDeclAssign("int", $2, 0, $7);
+        $$ = create2DArrayDeclOfLength("int", $2, $4, $7); /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
         free($2);
     }
     ;
@@ -117,13 +103,65 @@ decl:
 assign:
     /* array element assignment: ID '[' expr ']' '=' expr ';' */
     ID '[' expr ']' '=' expr ';' {
-        $$ = createArrayElemAssign($1, $3, $6);
+        $$ = createArrayElemAssign($1, $3, $6); 
         free($1);
     }
     /* plain variable assignment */
     | ID '=' expr ';' { 
         $$ = createAssign($1, $3);  
         free($1);
+    }
+
+    /* 2D arrays */
+    /*assign all rows and values to a 2d array */
+    | ID '='  '{' '}' ';'
+    {
+        /* not implemented, might not.*/
+        free($1);
+    }
+    /* assign a whole array (row)(y) to an X index. For example: list2D [0][] = {1, 2, 3}; list2D [1][] = {4, 5, 6}; would be [1, 2, 3],[4, 5, 6] */
+    | ID '[' expr ']' '[' ']' '=' arrayExpr ';'
+    {
+        /* not implemented, might not. */
+        /* $$ createArray2DRowAssign($1, $3, $8); */
+        free ($1);
+    }
+    /* assign a single element at a time */
+    | ID '[' expr ']' '[' expr ']' '=' expr ';'
+    {
+        $$ = createArray2DElemAssign($1, $3, $6, $9); /* scanner.l -> parser.y -> ast.h (done) -> ast.c (done)-> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
+        free($1);
+    }
+    ;
+
+declAssign:
+
+    /* ##### DONE ##### */
+    INT ID { 
+    } '=' expr ';'
+    {
+        $$ = createDeclAssign("int", $2, $5); /* done */
+        free($2);
+    }
+
+    /*array of length num with assignment */
+    | INT ID '[' NUM ']' '=' '{' arrayExpr '}' ';'
+    {
+        $$ = createArrayAssign("int", $2, $4, $8);/* done */
+        free($2);
+    }
+    /* array element of unknown length with assignment */
+    | INT ID '[' ']' '=' '{' arrayExpr '}' ';'
+    {
+        $$ = createArrayDeclAssign("int", $2, 0, $7);/* done */
+        free($2);
+    }
+
+    /* 2D array of unknown length with assignment */
+    | INT ID '[' ']' '[' ']' '=' '{' arrayExpr2D '}' ';' 
+    {
+        /* $$ = create2DArrayDeclAssign("int", $2, 0, 0, $9); */ /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
+        free($2);
     }
     ;
 
@@ -138,8 +176,13 @@ expr:
         $$ = createVar($1);  /* Create leaf node with variable name */
         free($1);            /* Free the identifier string */
     }
-    | ID '[' expr ']' {
+    | ID '[' expr ']' { /* allows to access whatever value is at index 'expr' */
         $$ = createArrayAccess($1, $3);
+        free($1);
+    }
+    | ID '[' expr ']' '[' expr ']' /* allows to access whatever value is at index 'expr', 'expr' */
+    {
+        $$ = createArray2DAccess($1, $3, $6); /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
         free($1);
     }
     | expr '+' expr { 
@@ -162,10 +205,20 @@ print_stmt:
 /* array expression list */
 arrayExpr:
     expr {
-        $$ = createExprList($1, NULL);
+        $$ = createExprList($1, NULL); /* done */
     }
     | arrayExpr ',' expr {
-        $$ = createExprList($3, $1);
+        $$ = createExprList($3, $1); /* done */
+    }
+    ;
+
+/* 2D array expression list */
+arrayExpr2D:
+    '{' arrayExpr '}' {
+        /* $$ = create2DExprList($2, NULL); */ /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
+    }
+    | arrayExpr2D ',' '{' arrayExpr '}' {
+        /* $$ = create2DExprList($4, $1); */ /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
     }
     ;
 

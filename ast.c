@@ -128,6 +128,38 @@ ASTNode* createArrayDeclAssign(char* type, char* name, int size, ASTNode* initLi
     return node;
 }
 
+ASTNode* create2DArrayDeclOfLength(char* type, char* name, int sizeX, int sizeY)
+{
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_ARRAY_2D_DECL;
+    node->data.array_2d_decl.type = strdup(type);
+    node->data.array_2d_decl.name = strdup(name);
+    node->data.array_2d_decl.sizeX = sizeX;
+    node->data.array_2d_decl.sizeY = sizeY;
+    return node;
+}
+
+ASTNode* createArray2DAccess(char* name, ASTNode* indexX, ASTNode* indexY)
+{
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_ARRAY_2D_ACCESS;
+    node->data.array_2d_access.name = strdup(name);
+    node->data.array_2d_access.indexX = indexX;
+    node->data.array_2d_access.indexY = indexY;
+    return node;
+}
+
+ASTNode* createArray2DElemAssign(char* name, ASTNode* indexX, ASTNode* indexY, ASTNode* value)
+{
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_ARRAY_2D_ELEM_ASSIGN;
+    node->data.array_2d_elem_assign.name = strdup(name);
+    node->data.array_2d_elem_assign.indexX = indexX;
+    node->data.array_2d_elem_assign.indexY = indexY;
+    node->data.array_2d_elem_assign.value = value;
+    return node;
+}
+
 
 /* Display the AST structure (for debugging and education) */
 void printAST(ASTNode* node, int level) {
@@ -189,6 +221,27 @@ void printAST(ASTNode* node, int level) {
             printf("ARRAY_DECL_ASSIGN: %s %s[%d]\n", node->data.array_decl_assign.type, node->data.array_decl_assign.name, node->data.array_decl_assign.size);
             printAST(node->data.array_decl_assign.initList, level + 1);
             break;
-
+        case NODE_ARRAY_2D_DECL:
+            printf("ARRAY_2D_DECL: %s[%d][%d]\n", 
+            node->data.array_2d_decl.name,
+            node->data.array_2d_decl.sizeX, 
+            node->data.array_2d_decl.sizeY);
+            break;
+        case NODE_ARRAY_2D_ACCESS:
+            printf("ARRAY_2D_ACCESS: %s\n", node->data.array_2d_access.name);
+            printf("  IndexX:\n");
+            printAST(node->data.array_2d_access.indexX, level + 1);
+            printf("  IndexY:\n");
+            printAST(node->data.array_2d_access.indexY, level + 1);
+            break;
+        case NODE_ARRAY_2D_ELEM_ASSIGN:
+            printf("ARRAY_2D_ASSIGN: %s\n", node->data.array_2d_elem_assign.name);
+            printf("  IndexX:\n");
+            printAST(node->data.array_2d_elem_assign.indexX, level + 1);
+            printf("  IndexY:\n");
+            printAST(node->data.array_2d_elem_assign.indexY, level + 1);
+            printf("\nValue:\n");
+            printAST(node->data.array_2d_elem_assign.value, level + 1);
+            break;
     }
 }

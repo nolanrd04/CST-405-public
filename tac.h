@@ -13,6 +13,7 @@
 typedef enum {
     TAC_ADD,           /* Addition: result = arg1 + arg2 */
     TAC_SUB,           /* Subtraction: result = arg1 - arg2 */
+    TAC_MUL,
     TAC_ASSIGN,        /* Assignment: result = arg1 */
     TAC_PRINT,         /* Print: print(arg1) */
     TAC_DECL,          /* Declaration: declare result */
@@ -21,7 +22,9 @@ typedef enum {
     TAC_ARRAY_DECL,     /* Array declaration: declare array[size] */
     TAC_ARRAY_ASSIGN,  /* Array assignment: array[index] = value */
     TAC_ARRAY_ACCESS,   /* Array access: temp = array[index] */
-    TAC_ARRAY_EXPR
+    TAC_ARRAY_EXPR,
+    TAC_ARRAY_2D_DECL,
+    TAC_ARRAY_2D_ACCESS
 } TACOp;
 
 /* TAC INSTRUCTION STRUCTURE */

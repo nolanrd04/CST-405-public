@@ -23,7 +23,10 @@ typedef enum {
     NODE_ARRAY_ASSIGN, /*Array assingment (e.g., x[5] = 10) */
     NODE_ARRAY_ACCESS, /*Array Acces (e.g., x[5]) */
     NODE_ARRAY_DECL_ASSIGN, /*Array declaration with assignment (e.g., int x[3] = {1,2,3}) */
-    NODE_EXPR_LIST   /*List of expressions (for array initializers)*/
+    NODE_EXPR_LIST,   /*List of expressions (for array initializers)*/
+    NODE_ARRAY_2D_DECL,
+    NODE_ARRAY_2D_ACCESS,
+    NODE_ARRAY_2D_ELEM_ASSIGN
 } NodeType;
 
 /* AST NODE STRUCTURE
@@ -94,7 +97,7 @@ typedef struct ASTNode {
         struct {
             struct ASTNode* expr;      /* Current expression */
             struct ASTNode* next;      /* Next expression in list */
-        } list;
+        } list; /* array */
 
         struct {
             char* type;              /* Type (e.g., "int") */
@@ -102,6 +105,27 @@ typedef struct ASTNode {
             int size;                /* Size (0 if inferred from initializer) */
             struct ASTNode* initList; /* Initializer expression list */
         } array_decl_assign;
+
+        struct
+        {
+            char* type;
+            char* name;
+            int sizeX;
+            int sizeY;
+        }array_2d_decl;
+
+        struct{
+            char* name;
+            struct ASTNode* indexX;
+            struct ASTNode* indexY;
+        }array_2d_access;
+
+        struct{
+            char* name;
+            struct ASTNode* indexX;
+            struct ASTNode* indexY;
+            struct ASTNode* value;
+        }array_2d_elem_assign;
 
     } data;
 } ASTNode;
@@ -122,12 +146,17 @@ ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2);
 ASTNode* createDeclAssign(char* type, char* id, ASTNode* expr);
 
 /* arrays */
+/* 1d */
 ASTNode* createArrayDeclOfLength(char* type, char* id, int length);
 ASTNode* createArrayAssign(char* name, char* id, int size, ASTNode* expr);
 ASTNode* createArrayAccess(char* name, ASTNode* index);
 ASTNode* createExprList(ASTNode* expr, ASTNode* next);
 ASTNode* createArrayElemAssign(char* name, ASTNode* index, ASTNode* value);
 ASTNode* createArrayDeclAssign(char* type, char* name, int size, ASTNode* initList);
+/* 2d */
+ASTNode* create2DArrayDeclOfLength(char* type, char* name, int sizeX, int sizeY);
+ASTNode* createArray2DAccess(char* name, ASTNode* indexX, ASTNode* indexY);
+ASTNode* createArray2DElemAssign(char* name, ASTNode* indexX, ASTNode* indexY, ASTNode* value);
 
 
 /* AST DISPLAY FUNCTION */

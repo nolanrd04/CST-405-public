@@ -95,3 +95,68 @@ int getArraySize(char* name) {
     }
     return 0;  /* Variable not found */
 }
+
+int addArray2DVar(char* name, int sizeX, int sizeY)
+{
+    /* Check for duplicate declaration */
+    if (isVarDeclared(name)) {
+        printf("SYMTAB ERROR: Variable %s already declared\n", name);
+        return -1;  /* Error: variable already exists */
+    }
+    
+    /* Add new symbol entry */
+    symtab.vars[symtab.count].name = strdup(name);
+    symtab.vars[symtab.count].offset = symtab.nextOffset;
+    symtab.vars[symtab.count].isArray = 1; // Mark as array
+    symtab.vars[symtab.count].array2DSizeX = sizeX;
+    symtab.vars[symtab.count].array2DSizeY = sizeY;
+    
+    /* Advance offset by size^2 * 4 bytes (size of int in MIPS) */
+    symtab.nextOffset += (sizeX * sizeY) * 4;
+    symtab.count++;
+    
+    /* Return the offset for this array variable */
+    return symtab.vars[symtab.count - 1].offset;
+}
+
+/* Get the X dimension of a 2D array */
+int getArray2DSizeX(char* name) {
+    for (int i = 0; i < symtab.count; i++) {
+        if (strcmp(symtab.vars[i].name, name) == 0) {
+            if (symtab.vars[i].isArray) {
+                return symtab.vars[i].array2DSizeX;
+            } else {
+                return -1;  /* Not an array */
+            }
+        }
+    }
+    return -1;  /* Variable not found */
+}
+
+/* Get the Y dimension of a 2D array */
+int getArray2DSizeY(char* name) {
+    for (int i = 0; i < symtab.count; i++) {
+        if (strcmp(symtab.vars[i].name, name) == 0) {
+            if (symtab.vars[i].isArray) {
+                return symtab.vars[i].array2DSizeY;
+            } else {
+                return -1;  /* Not an array */
+            }
+        }
+    }
+    return -1;  /* Variable not found */
+}
+
+/* Check if a variable is a 2D array */
+int is2DArrayVar(char* name) {
+    for (int i = 0; i < symtab.count; i++) {
+        if (strcmp(symtab.vars[i].name, name) == 0) {
+            if (symtab.vars[i].isArray && 
+                symtab.vars[i].array2DSizeX > 0 && 
+                symtab.vars[i].array2DSizeY > 0) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}

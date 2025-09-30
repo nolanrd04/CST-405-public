@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "tac.h"
+#include "symtab.h"
 
 TACList tacList;
 TACList optimizedList;
@@ -70,6 +71,16 @@ char* generateTACExpr(ASTNode* node) {
             if (node->data.binop.op == '+') {
                 appendTAC(createTAC(TAC_ADD, left, right, temp));
             }
+
+            if (node->data.binop.op == '-')
+            {
+                appendTAC(createTAC(TAC_SUB, left, right, temp));
+            }
+
+            if (node->data.binop.op == '*')
+            {
+                appendTAC(createTAC(TAC_MUL, left, right, temp));
+            }
             
             return temp;
         }
@@ -80,6 +91,23 @@ char* generateTACExpr(ASTNode* node) {
             char* temp = newTemp();
             // Generate TAC for array access
             appendTAC(createTAC(TAC_ARRAY_ACCESS, indexExpr, NULL, temp));
+            return temp;
+        }
+
+        case NODE_ARRAY_2D_ACCESS:
+        {
+            // Generate TAC for 2D array access
+            // Need to compute: base + (indexX * sizeY + indexY) * 4
+            char* indexXExpr = generateTACExpr(node->data.array_2d_access.indexX);
+            char* indexYExpr = generateTACExpr(node->data.array_2d_access.indexY);
+            char* temp = newTemp();
+    
+            // Create a TAC instruction with both indices
+            // We'll store both indices in a special format: "indexX,indexY"
+            char* combinedIndex = malloc(50);
+            sprintf(combinedIndex, "%s,%s", indexXExpr, indexYExpr);
+    
+            appendTAC(createTAC(TAC_ARRAY_2D_ACCESS, combinedIndex, node->data.array_2d_access.name, temp));
             return temp;
         }
         
@@ -124,7 +152,39 @@ void generateTAC(ASTNode* node) {
                node->data.array_assign.name));
             break;
         
-        case NODE_ARRAY_ACCESS:
+
+        case NODE_ARRAY_2D_DECL:
+            appendTAC(createTAC(TAC_ARRAY_2D_DECL, NULL, NULL, node->data.array_2d_decl.name));
+            break;
+
+        
+        case NODE_ARRAY_2D_ELEM_ASSIGN:{
+            // Generate TAC for the value being assigned
+            char* valueExpr = generateTACExpr(node->data.array_2d_elem_assign.value);
+
+            // Generate TAC for the indices
+            char* indexXExpr = generateTACExpr(node->data.array_2d_elem_assign.indexX);
+            char* indexYExpr = generateTACExpr(node->data.array_2d_elem_assign.indexY);
+
+            // Look up the number of columns from the symbol table
+            int numCols = getArray2DSizeY(node->data.array_2d_elem_assign.name);
+
+            // Multiply: t1 = indexX * numCols
+            char* t1 = newTemp();
+            char numColsStr[20];
+            sprintf(numColsStr, "%d", numCols);
+            appendTAC(createTAC(TAC_MUL, indexXExpr, numColsStr, t1));
+
+            // Add: t2 = t1 + indexY
+            char* t2 = newTemp();
+            appendTAC(createTAC(TAC_ADD, t1, indexYExpr, t2));
+
+            // Final 1D array assignment: arr[t2] = valueExpr
+            appendTAC(createTAC(TAC_ARRAY_ASSIGN, t2, valueExpr,
+                node->data.array_2d_elem_assign.name));
+            break;
+        }
+
             
         default:
             break;
@@ -161,21 +221,34 @@ void printTAC() {
                 break;
             default:
                 break;
-        case TAC_ARRAY_DECL:
-            printf("ARRAY_DECL %s", curr->result);
-            printf("     // Declare array '%s'\n", curr->result);
-            break;
+            case TAC_ARRAY_DECL:
+                printf("ARRAY_DECL %s", curr->result);
+                printf("     // Declare array '%s'\n", curr->result);
+                break;
 
-        case TAC_ARRAY_ASSIGN:
-            printf("%s[%s] = %s", curr->result, curr->arg1, curr->arg2);
-            printf("   // Array assignment\n");
-            break;
+            case TAC_ARRAY_ASSIGN:
+                printf("%s[%s] = %s", curr->result, curr->arg1, curr->arg2);
+                printf("   // Array assignment\n");
+                break;
 
-        case TAC_ARRAY_ACCESS:
-            printf("%s = array[%s]", curr->result, curr->arg1);
-            printf("  // Array access\n");
-            break;
-            }
+            case TAC_ARRAY_ACCESS:
+                printf("%s = array[%s]", curr->result, curr->arg1);
+                printf("  // Array access\n");
+                break;
+            case TAC_ARRAY_2D_DECL:
+                printf("ARRAY_2D_DECL %s", curr->result);
+                printf("     // Declare 2D array '%s'\n", curr->result);
+                break;
+            case TAC_ARRAY_2D_ACCESS:
+                printf("%s = %s[%s]", curr->result, curr->arg2, curr->arg1);
+                printf("  // 2D Array access\n");
+                break;
+            case TAC_MUL:
+                printf("%s = %s * %s", curr->result, curr->arg1, curr->arg2);
+                printf("     // Multiply: store result in %s\n", curr->result);
+                break;
+
+        }
         curr = curr->next;
     }
 }
@@ -275,6 +348,44 @@ void optimizeTAC() {
                 }
                 break;
             }
+
+            case TAC_MUL:
+            {
+                char* left = curr->arg1;
+                char* right = curr->arg2;
+
+                // Look up values in propagation table
+                for (int i = valueCount - 1; i >= 0; i--) {
+                    if (strcmp(values[i].var, left) == 0) {
+                        left = values[i].value;
+                        break;
+                    }
+                }
+                for (int i = valueCount - 1; i >= 0; i--) {
+                    if (strcmp(values[i].var, right) == 0) {
+                        right = values[i].value;
+                        break;
+                    }
+                }
+
+                // Constant folding
+                if (isdigit(left[0]) && isdigit(right[0])) {
+                    int result = atoi(left) * atoi(right);
+                    char* resultStr = malloc(20);
+                    sprintf(resultStr, "%d", result);
+
+                    // Store for propagation
+                    values[valueCount].var = strdup(curr->result);
+                    values[valueCount].value = resultStr;
+                    valueCount++;
+
+                    newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
+                } else {
+                    newInstr = createTAC(TAC_MUL, left, right, curr->result);
+                }
+                break;
+            }
+
             
             case TAC_ASSIGN: {
                 char* value = curr->arg1;
@@ -358,6 +469,19 @@ void optimizeTAC() {
 
             case TAC_ARRAY_EXPR:
 
+            case TAC_ARRAY_2D_DECL:
+                newInstr = createTAC(TAC_ARRAY_2D_DECL, NULL, NULL, curr->result);
+                break;
+            
+            case TAC_ARRAY_2D_ACCESS:
+            {
+                char* indices = curr->arg1;
+    
+                // Try to optimize the indices if they're in propagation table
+                // For now, just pass through - 2D index calculation is complex
+                newInstr = createTAC(TAC_ARRAY_2D_ACCESS, indices, curr->arg2, curr->result);
+                break;
+            }
 
         }
         
@@ -401,6 +525,12 @@ void printOptimizedTAC() {
                 } else {
                     printf("          // Print variable\n");
                 }
+                break;
+            case TAC_ARRAY_2D_DECL:
+                printf("ARRAY_2D_DECL %s\n", curr->result);
+                break;
+            case TAC_ARRAY_2D_ACCESS:
+                printf("%s = %s[%s]\n", curr->result, curr->arg2, curr->arg1);
                 break;
             default:
                 break;
