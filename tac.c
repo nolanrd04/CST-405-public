@@ -5,6 +5,17 @@
 #include "tac.h"
 #include "symtab.h"
 
+// Checks if string is an integer constant & handles negatives
+int isNumeric(const char* s) {
+    if (!s || !*s) return 0;
+    if (*s == '-') s++;
+    for (; *s; s++) {
+        if (!isdigit(*s)) return 0;
+    }
+    return 1;
+}
+
+
 TACList tacList;
 TACList optimizedList;
 
@@ -292,9 +303,19 @@ void optimizeTAC() {
                         break;
                     }
                 }
+
+                // Algebraic simplifications
+                if (isNumeric(left) && atoi(left) == 0) {
+                    newInstr = createTAC(TAC_ASSIGN, right, NULL, curr->result);
+                    break;
+                }
+                if (isNumeric(right) && atoi(right) == 0) {
+                    newInstr = createTAC(TAC_ASSIGN, left, NULL, curr->result);
+                    break;
+                }
                 
                 // Constant folding
-                if (isdigit(left[0]) && isdigit(right[0])) {
+                if (isNumeric(left) && isNumeric(right)) {
                     int result = atoi(left) + atoi(right);
                     char* resultStr = malloc(20);
                     sprintf(resultStr, "%d", result);
@@ -330,9 +351,15 @@ void optimizeTAC() {
                         break;
                     }
                 }
+
+                // Algebraic simplifications
+                if (isNumeric(right) && atoi(right) == 0) {
+                    newInstr = createTAC(TAC_ASSIGN, left, NULL, curr->result);
+                    break;
+                }
                 
                 // Constant folding
-                if (isdigit(left[0]) && isdigit(right[0])) {
+                if (isNumeric(left) && isNumeric(right)) {
                     int result = atoi(left) - atoi(right);
                     char* resultStr = malloc(20);
                     sprintf(resultStr, "%d", result);
@@ -368,8 +395,22 @@ void optimizeTAC() {
                     }
                 }
 
+                // Algebraic simplifications
+                if ((isNumeric(left) && atoi(left) == 0) || (isNumeric(right) && atoi(right) == 0)) {
+                    newInstr = createTAC(TAC_ASSIGN, "0", NULL, curr->result);
+                    break;
+                }
+                if (isNumeric(left) && atoi(left) == 1) {
+                    newInstr = createTAC(TAC_ASSIGN, right, NULL, curr->result);
+                    break;
+                }
+                if (isNumeric(right) && atoi(right) == 1) {
+                    newInstr = createTAC(TAC_ASSIGN, left, NULL, curr->result);
+                    break;
+                }
+
                 // Constant folding
-                if (isdigit(left[0]) && isdigit(right[0])) {
+                if (isNumeric(left) && isNumeric(right)) {
                     int result = atoi(left) * atoi(right);
                     char* resultStr = malloc(20);
                     sprintf(resultStr, "%d", result);
@@ -396,6 +437,11 @@ void optimizeTAC() {
                         value = values[i].value;
                         break;
                     }
+                }
+                
+                // Skip self-assignments e.g. a=a
+                if (strcmp(value, curr->result) == 0) {
+                    break; 
                 }
                 
                 // Store for propagation
