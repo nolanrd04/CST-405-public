@@ -1,12 +1,12 @@
-int tacOptimizationTest() {
-    int a, b, c;
+int a;
+int b;
+int c;
 
-    a = 5;
-    b = 0;
-    c = a + b;  // Should optimize c=a+b to c=a
-    c = c; // Should eliminate self-assignment
+a = 5;
+b = 0;
+c = a + b;
+c = c; 
 
-    print(a);
-    print(b);
-    print(c);
-}
+print(a);
+print(b);
+print(c);
