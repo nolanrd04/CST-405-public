@@ -14,6 +14,7 @@ typedef enum {
     TAC_ADD,           /* Addition: result = arg1 + arg2 */
     TAC_SUB,           /* Subtraction: result = arg1 - arg2 */
     TAC_MUL,
+    TAC_DIV,           
     TAC_ASSIGN,        /* Assignment: result = arg1 */
     TAC_PRINT,         /* Print: print(arg1) */
     TAC_DECL,          /* Declaration: declare result */
@@ -46,7 +47,7 @@ typedef struct {
 /* TAC GENERATION FUNCTIONS */
 void initTAC();                                                    /* Initialize TAC lists */
 char* newTemp();                                                   /* Generate new temp variable */
-TACInstr* createTAC(TACOp op, char* arg1, char* arg2, char* result); /* Create TAC instruction */
+TACInstr* createTAC(TACOp op, char* arg1, char* arg2, char* result); /* Create TAC instruction */                   /* Propagate known values */
 void appendTAC(TACInstr* instr);                                  /* Add instruction to list */
 void generateTAC(ASTNode* node);                                  /* Convert AST to TAC */
 char* generateTACExpr(ASTNode* node);                             /* Generate TAC for expression */

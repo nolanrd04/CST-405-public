@@ -28,3 +28,8 @@ list2d[2][2] = 7;
 
 print(list2d[2][2]);
 print(list2d[0][0]);
+
+int div = 10 / 2;
+int mul = 3 * 4;
+print(div);
+print(mul);

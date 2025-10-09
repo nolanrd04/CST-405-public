@@ -40,6 +40,10 @@ void genExpr(ASTNode* node) {
                 fprintf(output, "    add $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
             } else if (node->data.binop.op == '-') {
                 fprintf(output, "    sub $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+            } else if (node->data.binop.op == '*') {
+                fprintf(output, "    mul $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+            } else if (node->data.binop.op == '/') {
+                fprintf(output, "    div $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
             } else {
                 fprintf(stderr, "Error: unsupported binary op '%c'\n", node->data.binop.op);
                 exit(1);

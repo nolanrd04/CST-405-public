@@ -160,3 +160,12 @@ int is2DArrayVar(char* name) {
     }
     return 0;
 }
+
+const Symbol* lookupSymbol(const char* name) {
+    for (int i = 0; i < symtab.count; i++) {
+        if (strcmp(symtab.vars[i].name, name) == 0) {
+            return &symtab.vars[i];
+        }
+    }
+    return NULL; // Not found
+}

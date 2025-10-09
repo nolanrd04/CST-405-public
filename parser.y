@@ -40,6 +40,8 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 /* OPERATOR PRECEDENCE AND ASSOCIATIVITY */
 %left '+'  /* Addition is left-associative: a+b+c = (a+b)+c */
 %left '-' /* Subtraction is left-associative: a-b-c = (a-b)-c */
+%left '*'
+%left '/'  /* Division is left-associative: a/b/c = (a/b)/c */
 
 %%
 
@@ -94,6 +96,7 @@ decl:
     /* 2D array element of length NUM x NUM */
     | INT ID '[' NUM ']' '[' NUM ']' ';'
     {
+        addArray2DVar($2, $4, $7);
         $$ = create2DArrayDeclOfLength("int", $2, $4, $7); /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
         free($2);
     }
@@ -192,6 +195,14 @@ expr:
         /* Subtraction operation - builds binary tree */
         $$ = createBinOp('-', $1, $3);  /* Left child, op, right child */
     }
+    | expr '*' expr { 
+        /* Multiplication operation - builds binary tree */
+        $$ = createBinOp('*', $1, $3);  /* Left child, op, right child */
+    }
+    | expr '/' expr { 
+        /* Division operation - builds binary tree */
+        $$ = createBinOp('/', $1, $3);  /* Left child, op, right child */
+    }
     ;
 
 /* PRINT STATEMENT - "print(expr);" */
@@ -228,3 +239,15 @@ arrayExpr2D:
 void yyerror(const char* s) {
     fprintf(stderr, "Syntax Error: %s\n", s);
 }
+
+
+// Our compilers supports:
+// 1. Binary operations: +, -, *, /
+// 2. Stand alone int variable declarations
+// 3. int variable assignments
+// 4. Simultaneous int declaration and assignment
+// 5. stand alone 1d and 2d array variable declarations
+// 6. by-index element assignments for 1d and 2d arrays
+// 7. by-index element access for 1d and 2d arrays
+// 8. simultaneous declaring and assigning values to a 1d array.
+// 9. print statements for values
