@@ -43,6 +43,8 @@
 "{"             { return '{'; }
 "}"             { return '}'; }
 ","             { return ','; }
+"return"        { return RETURN;}
+"void"          { return VOID; }
 
 
 [ \t\n]         { }

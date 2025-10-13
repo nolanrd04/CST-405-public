@@ -33,9 +33,13 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 %token <num> NUM        /* Number token carries an integer value */
 %token <str> ID         /* Identifier token carries a string */
 %token INT PRINT        /* Keywords have no semantic value */
+%token RETURN           /* Added RETURN token */
+%token VOID             /* Added VOID token for functions with no return*/
+
 
 /* NON-TERMINAL TYPES - Define what type each grammar rule returns */
 %type <node> program stmt_list stmt decl assign declAssign expr print_stmt arrayExpr arrayExpr2D
+%type <node> func_decl param_list param block return_stmt func_call arg_list
 
 /* OPERATOR PRECEDENCE AND ASSOCIATIVITY */
 %left '+'  /* Addition is left-associative: a+b+c = (a+b)+c */
@@ -52,6 +56,10 @@ program:
     stmt_list { 
         /* Action: Save the statement list as our AST root */
         root = $1;  /* $1 refers to the first symbol (stmt_list) */
+    }
+    | program func_decl {
+        $$ = createStmtList($1, $2); /* Append function declaration to program */
+        root = $$; /* Update root to include function */
     }
     ;
 
@@ -73,8 +81,83 @@ stmt:
     | assign    /* Assignment statement */
     | declAssign /* Declaration with assignment */
     | print_stmt /* Print statement */
+    | return_stmt /* Return statement */
+    | block      /* Block of statements */
+    | func_call ';' /* Function call statement */
     ;
 
+/* (NEW) ##FUNCTION DECLARATION## */
+func_decl:
+    INT ID '(' param_list ')' block {
+        $$ = createFuncDecl("int", $2, $4, $6); /* Create function declaration node */
+        free($2); /* Free the function name string */
+    }
+    | INT ID '(' ')' block {
+        $$ = createFuncDecl("int", $2, NULL, $5); /* Function with no parameters */
+        free($2);
+    }
+    |VOID ID '(' ')' block {
+        $$ = createFuncDecl("void", $2, $4, $6); /* Void function with no parameters */
+        free($2);
+    }
+    | VOID ID '(' ')' block {
+        $$ = createFUncDecl("void", $2, NULL, $5); /* Void function with no parameters */
+        free($2);
+    }
+    ;
+/* (NEW) ##PARAMETER LIST## */
+param_list:
+    param {
+        $$ = $1; /* Single parameter */
+    }
+    | param_list ',' param {
+        $$ = createParamList($1, $3); /* Append parameter to list */
+    }
+    ;
+/* (NEW) ## SINGLE PARAMETER## */
+param:
+    INT ID {
+        $$ = createParam("int", $2); /* Create parameter node */
+        free($2);
+    }
+    ;
+/* (NEW) ##BLOCK OF STATEMENTS## */
+block:
+    '{' stmt_list '}' {
+        $$ = createBlock($2); /* Create block node with statement list */
+    }
+    | '{' '}' {
+        $$ = createBlock(NULL); /* Empty block */
+    }
+    ;
+/* (NEW) ##RETURN STATEMENT## */
+return_stmt:
+    RETURN expr ';' {
+        $$ = createReturn($2); /* Create return statement node */
+    }
+    | RETURN ';' {
+        $$ = createReturn(NULL); /* Return with no value */
+    }
+    ;
+/* (NEW) ##FUNCTION CALL## */
+func_call:
+    ID '(' arg_list ')' {
+        $$ = createFuncCall($1, $3); /* Create function call node */
+        free($1); /* Free function name string */
+    }
+    | ID '(' ')' {
+        $$ = createFuncCall($1, NULL); /* Function call with no arguments */
+        free($1);
+    }
+    ;
+/* (NEW) ##ARGUMENT LIST## */
+arg_list:
+    expr {
+        $$ = createArgList($1, NULL); /* Single argument */
+    }
+    | arg_list ',' expr {
+        $$ = createArgList($3, $1); /* Append argument to list */
+    }
 /* DECLARATION RULE - "int x;" or "int x = expr;*/
 decl:
     INT ID ';' { 
@@ -202,6 +285,11 @@ expr:
     | expr '/' expr { 
         /* Division operation - builds binary tree */
         $$ = createBinOp('/', $1, $3);  /* Left child, op, right child */
+    }
+    | func_call { 
+        /* ADDED */
+        /* Function call as an expression */
+        $$ = $1;  /* Just pass up the function call node */
     }
     ;
 

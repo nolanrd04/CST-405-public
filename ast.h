@@ -26,7 +26,16 @@ typedef enum {
     NODE_EXPR_LIST,   /*List of expressions (for array initializers)*/
     NODE_ARRAY_2D_DECL,
     NODE_ARRAY_2D_ACCESS,
-    NODE_ARRAY_2D_ELEM_ASSIGN
+    NODE_ARRAY_2D_ELEM_ASSIGN,
+
+    /* ## NEW: Function related node types ## */
+    NODE_FUNC_DECL, /* Function declaration (e.g., int foo(int a)) */
+    NODE_PARAM,      /* Function parameter (e.g., int a) */
+    NODE_PARAM_LIST, /* List of function parameters */
+    NODE_BLOCK,      /* Block of statements (e.g., { ... }) */
+    NODE_RETURN,     /* Return statement (e.g., return expr;) */
+    NODE_FUNC_CALL,  /* Function call (e.g., foo(5)) */
+    NODE_ARG_LIST    /* List of function call arguments */
 } NodeType;
 
 /* AST NODE STRUCTURE
@@ -127,6 +136,49 @@ typedef struct ASTNode {
             struct ASTNode* value;
         }array_2d_elem_assign;
 
+        /* ## NEW: function declaration structure (NODE_FUNC_DECL)## */
+        struct {
+            char* returnType;          /* Return type (e.g., "int") */
+            char* name;                /* Function name */
+            struct ASTNode* params;    /* Parameter list (NODE_PARAM_LIST) */
+            struct ASTNode* body;      /* Function body (NODE_BLOCK) */
+        } func_decl;
+
+        /* ## NEW: Parameter structure (NODE_PARAM) ## */
+        struct {
+            char* type;                /* Parameter type (e.g., "int") */
+            char* name;                /* Parameter name */
+        } param;
+
+        /* ## NEW: Parameter list structure (NODE_PARAM_LIST) ## */
+        struct {
+            struct ASTNode* param;     /* Current parameter (NODE_PARAM) */
+            struct ASTNode* next;      /* Next parameter in list */
+        } param_list;
+
+        /* ## NEW: Block structure (NODE_BLOCK) ## */
+        struct {
+            struct ASTNode* stmts;   /* Statements in the block (NODE_STMT_LIST) */
+        } block;
+
+        /* ## NEW: Return statement structure (NODE_RETURN) ## */
+        struct {
+            struct ASTNode* value; /* return value (null for void) */
+        } ret;
+
+        /* ## NEW: Function call structure (NODE_FUNC_CALL) ## */
+        struct {
+            char* name;                /* Function name */
+            struct ASTNode* args;      /* Argument list (NODE_ARG_LIST) */
+        } func_call;
+
+        /* ## NEW: Argument list structure (NODE_ARG_LIST) ## */
+        struct {
+            struct ASTNode* expr;       /* Current argument expression */
+            struct ASTNode* next;      /* Next argument in list */
+        } arg_list;
+
+
     } data;
 } ASTNode;
 
@@ -157,6 +209,15 @@ ASTNode* createArrayDeclAssign(char* type, char* name, int size, ASTNode* initLi
 ASTNode* create2DArrayDeclOfLength(char* type, char* name, int sizeX, int sizeY);
 ASTNode* createArray2DAccess(char* name, ASTNode* indexX, ASTNode* indexY);
 ASTNode* createArray2DElemAssign(char* name, ASTNode* indexX, ASTNode* indexY, ASTNode* value);
+
+/* NEW: function related AST construction functions */
+ASTNode* createFuncDecl(char* returnType, char* name, ASTNode* params, ASTNode* body); /* Function declaration */
+ASTNode* createParam(char* type, char* name);                     /* Function parameter */
+ASTNode* createParamList(ASTNode* param, ASTNode* next);          /* Parameter list */
+ASTNode* createBlock(ASTNode* stmts);                             /* Block of statements */
+ASTNode* createReturn(ASTNode* value);                            /* Return statement */
+ASTNode* createFuncCall(char* name, ASTNode* args);               /* Function call */
+ASTNode* createArgList(ASTNode* expr, ASTNode* next);             /* Argument list */
 
 
 /* AST DISPLAY FUNCTION */

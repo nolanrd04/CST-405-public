@@ -160,6 +160,55 @@ ASTNode* createArray2DElemAssign(char* name, ASTNode* indexX, ASTNode* indexY, A
     return node;
 }
 
+ASTNode* createFuncDecl(char* returnType, char* name, ASTNode* params, ASTNode* body) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_FUNC_DECL;
+    node->data.func_decl.returnType = strdup(returnType); /*store return type */
+    node->data.func_decl.name = strdup(name);         /* store function name */
+    node->data.func_decl.params = params;               /* Parameter list (NODE_PARAM_LIST) */
+    node->data.func_decl.body = body;                   /* Function body (NODE_BLOCK) */
+    return node;
+}
+
+ASTNode* createParam(char* type, char* name) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_PARAM;
+    node->data.param.type = strdup(type); /* store parameter type */
+    node->data.param.name = strdup(name); /* store parameter name */
+    return node;
+}
+
+ASTNode* createParamList(ASTNode* param, ASTNode* next){
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_PARAM_LIST;
+    node->data.param_list.param = param; /* Current parameter (NODE_PARAM) */
+    node->data.param_list.next = next;   /* Next parameter (NODE_PARAM_LIST) */
+    return node;
+}
+
+ASTNode* createBlock(ASTNode* stmts) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_BLOCK;
+    node->data.block.stmts = stmts; /* Store the list of statements */
+    return node;
+}
+
+ASTNode* createFuncCall(char* name, ASTNode* args){
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_FUNC_CALL;
+    node->data.func_call.name = strdup(name); /* Store function name */
+    node->data.func_call.args = args;         /* Store argument list (NODE_ARG_LIST) */
+    return node;
+}
+
+ASTNode* createArgList(ASTNode* expr, ASTNode* next) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_ARG_LIST;
+    node->data.arg_list.expr = expr;   /* Current argument expression */
+    node->data.arg_list.next = next;   /* Next argument in list */
+    return node;
+}
+
 
 /* Display the AST structure (for debugging and education) */
 void printAST(ASTNode* node, int level) {
@@ -242,6 +291,46 @@ void printAST(ASTNode* node, int level) {
             printAST(node->data.array_2d_elem_assign.indexY, level + 1);
             printf("\nValue:\n");
             printAST(node->data.array_2d_elem_assign.value, level + 1);
+            break;
+        case NODE_FUNC_DECL:
+            printf("FUNC_DECL: %s %s\n", node->data.func_decl.returnType, node->data.func_decl.name);
+            if (node->data.func_decl.params) {
+                for (int i = 0; i < level +1; i++) printf("  ");
+                printf("Parameters:\n");
+                printAST(node->data.func_decl.params, level + 2);
+            }
+            for (int i = 0; i < level +1; i++) printf("  ");
+            printf("Body:\n");
+            printAST(node->data.func_decl.body, level + 2);
+            break;
+        case NODE_PARAM:
+            printf("PARAM: %s %s\n", node->data.param.type, node->data.param.name);
+            break;
+        case NODE_PARAM_LIST:
+            printAST(node->data.param_list.param, level);
+            printAST(node->data.param_list.next, level);
+            break;
+        case NODE_BLOCK:
+            printf("BLOCK:\n");
+            printAST(node->data.block.stmts, level + 1);
+            break;
+        case NODE_RETURN:
+            printf("RETURN:\n");
+            if (node ->data.ret.value){
+                printAST(node->data.ret.value, level + 1);
+            }
+            break;
+        case NODE_FUNC_CALL:
+            printf("FUNC_CALL: %s\n", node->data.func_call.name);
+            if (node->data.func_call.args) {
+                for (int i = 0; i < level +1; i++) printf("  ");
+                printf("Arguments:\n");
+                printAST(node->data.func_call.args, level + 2);
+            }
+            break;
+        case NODE_ARG_LIST:
+            printAST(node->data.arg_list.expr, level);
+            printAST(node->data.arg_list.next, level);
             break;
     }
 }
