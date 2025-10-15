@@ -184,6 +184,40 @@ void genExpr(ASTNode* node) {
             break;
         }
 
+        case NODE_FUNC_CALL: {
+            fprintf(output, "    # Call function: %s\n", node->data.func_call.name);
+    
+            // ✅ Reset temp counter before evaluating arguments
+    tempReg = 0;
+    
+    // Evaluate and pass arguments
+    ASTNode* arg = node->data.func_call.args;
+    int argNum = 0;
+    
+    while (arg) {
+        if (arg->type == NODE_ARG_LIST) {
+            tempReg = 0;  // Reset before each arg
+            genExpr(arg->data.arg_list.expr);  // Result in $t0
+            fprintf(output, "    sw $t0, %d($sp)\n", 100 + (argNum + 1) * 4);
+            argNum++;
+            arg = arg->data.arg_list.next;
+        } else {
+            tempReg = 0;
+            genExpr(arg);
+            fprintf(output, "    sw $t0, %d($sp)\n", 100 + (argNum + 1) * 4);
+            break;
+        }
+    }
+    
+    // Call the function
+    fprintf(output, "    jal %s\n", node->data.func_call.name);
+    
+    // Result is in $v0, move to $t0
+    fprintf(output, "    move $t0, $v0\n");
+    tempReg = 1;  // Mark $t0 as used
+    break;
+}
+
         default:
             break;
     }
@@ -210,6 +244,7 @@ void genStmt(ASTNode* node) {
                 exit(1);
             }
             fprintf(output, "    # Declared %s at offset %d\n", node->data.declAssign.id, offset);
+            tempReg = 0;
             // Generate code for the initializer expression
             genExpr(node->data.declAssign.expr);
             // Store the result in the variable's stack slot
@@ -308,7 +343,8 @@ void genStmt(ASTNode* node) {
 
             // Traverse list and extract actual expressions
             ASTNode* cur = init;
-            while (cur != NULL && count < 100) {
+            while (cur != NULL && count < 100) 
+            {
                 if (cur->type == NODE_STMT_LIST) {
                     // Get the expression from this list node
                 ASTNode* expr = cur->data.stmtlist.stmt;
@@ -320,50 +356,50 @@ void genStmt(ASTNode* node) {
                 // This is a direct expression, not wrapped in list
                 expressions[count++] = cur;
                 break;
+                }
             }
-        }
 
-        if (size == 0) {
-            size = count; // Infer size
-        }
+            if (size == 0) {
+                size = count; // Infer size
+            }
 
-        int offset = addArrayVar(node->data.array_decl_assign.name, size);
-        if (offset == -1) { 
-            fprintf(stderr, "Error: Variable %s already declared\n", node->data.array_decl_assign.name); 
-            exit(1); 
-        }
+            int offset = addArrayVar(node->data.array_decl_assign.name, size);
+            if (offset == -1) { 
+                fprintf(stderr, "Error: Variable %s already declared\n", node->data.array_decl_assign.name); 
+                exit(1); 
+            }
 
-        // Store the actual initializer values - SIMPLIFIED APPROACH
-        for (int i = 0; i < count && i < size; i++) {
+            // Store the actual initializer values - SIMPLIFIED APPROACH
+            for (int i = 0; i < count && i < size; i++) {
             // Reset temp register counter for each iteration
-            tempReg = 0;
+                tempReg = 0;
         
             // Generate expression into $t0
-            genExpr(expressions[count - 1 - i]);
+                genExpr(expressions[count - 1 - i]);
         
             // Use fixed registers for address calculation
-            fprintf(output, "    # Storing value at array position %d\n", i);
-            fprintf(output, "    addiu $t1, $sp, %d      # base address\n", offset);
-            fprintf(output, "    li    $t2, %d           # offset = %d * 4\n", i * 4, i);
-            fprintf(output, "    addu  $t3, $t1, $t2    # element address\n");
-            fprintf(output, "    sw    $t0, 0($t3)      # store value\n");
-        }
-    
-        tempReg = 0; // Reset for next statement
-        break;
-    }
-    case NODE_ARRAY_2D_DECL:
-    {
-        int offset = addArray2DVar(node->data.array_2d_decl.name, node->data.array_2d_decl.sizeX, node->data.array_2d_decl.sizeY); /* change to 2d array add */
-            if (offset == -1) {
-                fprintf(stderr, "Error: Array %s already declared\n", node->data.array_2d_decl.name);
-                exit(1);
+                fprintf(output, "    # Storing value at array position %d\n", i);
+                fprintf(output, "    addiu $t1, $sp, %d      # base address\n", offset);
+                fprintf(output, "    li    $t2, %d           # offset = %d * 4\n", i * 4, i);
+                fprintf(output, "    addu  $t3, $t1, $t2    # element address\n");
+                fprintf(output, "    sw    $t0, 0($t3)      # store value\n");
             }
-            fprintf(output, "    # Declared array %s of size %d , %d at offset %d\n", node->data.array_2d_decl.name, node->data.array_2d_decl.sizeX, node->data.array_2d_decl.sizeY, offset); /* what is %s and %d*/
+    
+            tempReg = 0; // Reset for next statement
             break;
-    }
+        }
+        case NODE_ARRAY_2D_DECL:
+        {
+            int offset = addArray2DVar(node->data.array_2d_decl.name, node->data.array_2d_decl.sizeX, node->data.array_2d_decl.sizeY); /* change to 2d array add */
+                if (offset == -1) {
+                    fprintf(stderr, "Error: Array %s already declared\n", node->data.array_2d_decl.name);
+                    exit(1);
+                }
+                fprintf(output, "    # Declared array %s of size %d , %d at offset %d\n", node->data.array_2d_decl.name, node->data.array_2d_decl.sizeX, node->data.array_2d_decl.sizeY, offset); /* what is %s and %d*/
+                break;
+        }
 
-    case NODE_ARRAY_2D_ELEM_ASSIGN:
+        case NODE_ARRAY_2D_ELEM_ASSIGN:
         {
             if (!is2DArrayVar(node->data.array_2d_elem_assign.name)) {
                 fprintf(stderr, "Error: %s is not a 2D array\n", node->data.array_2d_elem_assign.name);
@@ -404,6 +440,71 @@ void genStmt(ASTNode* node) {
             break;
         }
 
+        case NODE_FUNC_DECL: {
+            fprintf(output, "\n%s:\n", node->data.func_decl.name);
+            fprintf(output, "    # Function: %s\n", node->data.func_decl.name);
+            fprintf(output, "    addi $sp, $sp, -100\n");
+            fprintf(output, "    sw $ra, 0($sp)\n");
+    
+            // ✅ Load parameters from caller's stack
+            ASTNode* param = node->data.func_decl.params;
+            int paramNum = 0;
+    
+            while (param) {
+                if (param->type == NODE_PARAM_LIST) {
+                    if (param->data.param_list.param->type == NODE_PARAM) {
+                        char* paramName = param->data.param_list.param->data.param.name;
+                        addVar(paramName);
+                
+                        // Load from caller's frame (above our frame)
+                        fprintf(output, "    lw $t0, %d($sp)\n", 100 + (paramNum + 1) * 4);
+                        int offset = getVarOffset(paramName);
+                        fprintf(output, "    sw $t0, %d($sp)  # Store param %s\n", offset, paramName);
+                    }
+                    param = param->data.param_list.next;
+                    paramNum++;
+                } else if (param->type == NODE_PARAM) {
+                    char* paramName = param->data.param.name;
+                    addVar(paramName);
+            
+                    fprintf(output, "    lw $t0, %d($sp)\n", 100 + (paramNum + 1) * 4);
+                    int offset = getVarOffset(paramName);
+                fprintf(output, "    sw $t0, %d($sp)  # Store param %s\n", offset, paramName);
+                    break;
+                } else {
+                    break;
+                }
+            }
+    
+            genStmt(node->data.func_decl.body);
+            break;
+        }
+        case NODE_BLOCK: {
+            // Process all statements in the block
+            genStmt(node->data.block.stmts);
+            break;
+        }
+        
+        case NODE_RETURN: {
+            // Evaluate return expression and put in $v0
+            genExpr(node->data.ret.value);
+            fprintf(output, "    move $v0, $t0\n");  // Return value in $v0
+            
+            // Restore and return
+            fprintf(output, "    lw $ra, 0($sp)\n");
+            fprintf(output, "    addi $sp, $sp, 100\n");
+            fprintf(output, "    jr $ra\n");
+            break;
+        }
+        
+        case NODE_FUNC_CALL: {
+            tempReg = 0;  // ✅ ADD THIS LINE
+            genExpr(node);
+            // Result is ignored for statement-level calls
+            tempReg = 0;  // ✅ ADD THIS LINE
+            break;
+        }
+
         default:
             break;
     }
@@ -429,6 +530,7 @@ void generateMIPS(ASTNode* root, const char* filename) {
     fprintf(output, "    # Allocate stack space\n");
     fprintf(output, "    addi $sp, $sp, -400\n\n");
     
+    
     // Generate code for statements
     genStmt(root);
     
@@ -440,3 +542,4 @@ void generateMIPS(ASTNode* root, const char* filename) {
     
     fclose(output);
 }
+

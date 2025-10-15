@@ -17,6 +17,8 @@
  /* key words */
 "int"           { return INT; }
 "print"         { return PRINT; }
+"return"        { return RETURN;}
+"void"          { return VOID; }
 
  /* how an identifier must be structured: letter or underscore followed by any letter, number, or underscore. */
 [a-zA-Z_][a-zA-Z0-9_]* { 
@@ -43,8 +45,6 @@
 "{"             { return '{'; }
 "}"             { return '}'; }
 ","             { return ','; }
-"return"        { return RETURN;}
-"void"          { return VOID; }
 
 
 [ \t\n]         { }

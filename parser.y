@@ -57,10 +57,6 @@ program:
         /* Action: Save the statement list as our AST root */
         root = $1;  /* $1 refers to the first symbol (stmt_list) */
     }
-    | program func_decl {
-        $$ = createStmtList($1, $2); /* Append function declaration to program */
-        root = $$; /* Update root to include function */
-    }
     ;
 
 /* STATEMENT LIST - Handles multiple statements */
@@ -69,9 +65,18 @@ stmt_list:
         /* Base case: single statement */
         $$ = $1;  /* Pass the statement up as-is */
     }
+    |
+    func_decl { 
+        /* Base case: single function declaration */
+        $$ = $1;  /* Pass the function declaration up as-is */
+    }
     | stmt_list stmt { 
         /* Recursive case: list followed by another statement */
         $$ = createStmtList($1, $2);  /* Build linked list of statements */
+    }
+    |
+    stmt_list func_decl {
+        $$ = createStmtList($1, $2); /* Append function declaration to statement list */
     }
     ;
 
@@ -96,12 +101,8 @@ func_decl:
         $$ = createFuncDecl("int", $2, NULL, $5); /* Function with no parameters */
         free($2);
     }
-    |VOID ID '(' ')' block {
-        $$ = createFuncDecl("void", $2, $4, $6); /* Void function with no parameters */
-        free($2);
-    }
     | VOID ID '(' ')' block {
-        $$ = createFUncDecl("void", $2, NULL, $5); /* Void function with no parameters */
+        $$ = createFuncDecl("void", $2, NULL, $5); /* Void function with no parameters */
         free($2);
     }
     ;
@@ -158,6 +159,7 @@ arg_list:
     | arg_list ',' expr {
         $$ = createArgList($3, $1); /* Append argument to list */
     }
+    ;
 /* DECLARATION RULE - "int x;" or "int x = expr;*/
 decl:
     INT ID ';' { 

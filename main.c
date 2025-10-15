@@ -88,6 +88,7 @@ int main(int argc, char* argv[]) {
         printf("│ • System calls for print operations                      │\n");
         printf("└──────────────────────────────────────────────────────────┘\n");
         generateMIPS(root, argv[2]);
+        /* generateMIPSFromOptimizedTAC("output.s"); */
         printf("✓ MIPS assembly code generated to: %s\n", argv[2]);
         printf("\n");
         

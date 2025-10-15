@@ -209,6 +209,12 @@ ASTNode* createArgList(ASTNode* expr, ASTNode* next) {
     return node;
 }
 
+ASTNode* createReturn(ASTNode* value) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_RETURN;
+    node->data.ret.value = value;
+    return node;
+}
 
 /* Display the AST structure (for debugging and education) */
 void printAST(ASTNode* node, int level) {

@@ -25,7 +25,17 @@ typedef enum {
     TAC_ARRAY_ACCESS,   /* Array access: temp = array[index] */
     TAC_ARRAY_EXPR,
     TAC_ARRAY_2D_DECL,
-    TAC_ARRAY_2D_ACCESS
+    TAC_ARRAY_2D_ACCESS,
+
+    /* function-related */
+    TAC_FUNC_DECL,      /* Function declaration */
+    TAC_FUNC_BEGIN,     /* Mark start of function body */
+    TAC_FUNC_END,       /* Mark end of function */
+    TAC_PARAM,          /* Function parameter */
+    TAC_CALL,           /* Function call: result = call funcName */
+    TAC_ARG,            /* Pass argument: arg argValue */
+    TAC_RETURN,         /* Return: return arg1 */
+    TAC_LABEL
 } TACOp;
 
 /* TAC INSTRUCTION STRUCTURE */
