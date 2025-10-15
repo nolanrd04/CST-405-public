@@ -101,7 +101,7 @@ func_decl:
         free($2);
     }
     | VOID ID '(' ')' block {
-        $$ = createFUncDecl("void", $2, NULL, $5); /* Void function with no parameters */
+        $$ = createFuncDecl("void", $2, NULL, $5); /* Void function with no parameters */
         free($2);
     }
     ;
