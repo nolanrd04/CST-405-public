@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "codegen.h"
 #include "symtab.h"
+#include "tac.h"
+
+extern TACList optimizedList;  // to access the optimized TAC list
 
 FILE* output;
 int tempReg = 0;
@@ -185,36 +189,31 @@ void genExpr(ASTNode* node) {
         }
 
         case NODE_FUNC_CALL: {
-            fprintf(output, "    # Call function: %s\n", node->data.func_call.name);
+    fprintf(output, "    # Call function: %s\n", node->data.func_call.name);
     
-            // ✅ Reset temp counter before evaluating arguments
-    tempReg = 0;
-    
-    // Evaluate and pass arguments
+    // Evaluate and store arguments at correct offsets
     ASTNode* arg = node->data.func_call.args;
     int argNum = 0;
     
     while (arg) {
         if (arg->type == NODE_ARG_LIST) {
-            tempReg = 0;  // Reset before each arg
-            genExpr(arg->data.arg_list.expr);  // Result in $t0
-            fprintf(output, "    sw $t0, %d($sp)\n", 100 + (argNum + 1) * 4);
+            tempReg = 0;
+            genExpr(arg->data.arg_list.expr);  // ✅ Changed from .arg to .expr
+            // Store at offset 4, 8, 12, ... (starting after our frame)
+            fprintf(output, "    sw $t0, %d($sp)\n", 4 + (argNum * 4));
             argNum++;
             arg = arg->data.arg_list.next;
         } else {
             tempReg = 0;
             genExpr(arg);
-            fprintf(output, "    sw $t0, %d($sp)\n", 100 + (argNum + 1) * 4);
+            fprintf(output, "    sw $t0, %d($sp)\n", 4 + (argNum * 4));
             break;
         }
     }
     
-    // Call the function
     fprintf(output, "    jal %s\n", node->data.func_call.name);
-    
-    // Result is in $v0, move to $t0
     fprintf(output, "    move $t0, $v0\n");
-    tempReg = 1;  // Mark $t0 as used
+    tempReg = 0;
     break;
 }
 
@@ -248,7 +247,7 @@ void genStmt(ASTNode* node) {
             // Generate code for the initializer expression
             genExpr(node->data.declAssign.expr);
             // Store the result in the variable's stack slot
-            fprintf(output, "    sw $t%d, %d($sp)\n", tempReg - 1, offset);
+            fprintf(output, "    sw $t0, %d($sp)\n", offset);
             tempReg = 0;
             break;
         }
@@ -259,7 +258,7 @@ void genStmt(ASTNode* node) {
                 exit(1);
             }
             genExpr(node->data.assign.value);
-            fprintf(output, "    sw $t%d, %d($sp)\n", tempReg - 1, offset);
+            fprintf(output, "    sw $t0, %d($sp)\n", offset);
             tempReg = 0;
             break;
         }
@@ -441,44 +440,52 @@ void genStmt(ASTNode* node) {
         }
 
         case NODE_FUNC_DECL: {
-            fprintf(output, "\n%s:\n", node->data.func_decl.name);
-            fprintf(output, "    # Function: %s\n", node->data.func_decl.name);
-            fprintf(output, "    addi $sp, $sp, -100\n");
-            fprintf(output, "    sw $ra, 0($sp)\n");
+    fprintf(output, "\n%s:\n", node->data.func_decl.name);
+    fprintf(output, "    # Function: %s\n", node->data.func_decl.name);
     
-            // ✅ Load parameters from caller's stack
-            ASTNode* param = node->data.func_decl.params;
-            int paramNum = 0;
+    // Reset symbol table for each function
+    initSymTab();  // ✅ IMPORTANT - reset BEFORE adding params
     
-            while (param) {
-                if (param->type == NODE_PARAM_LIST) {
-                    if (param->data.param_list.param->type == NODE_PARAM) {
-                        char* paramName = param->data.param_list.param->data.param.name;
-                        addVar(paramName);
+    if (strcmp(node->data.func_decl.name, "main") == 0) {
+        fprintf(output, "    addi $sp, $sp, -400\n");
+    }
+    
+    fprintf(output, "    addi $sp, $sp, -100\n");
+    fprintf(output, "    sw $ra, 0($sp)\n");
+    
+    // Load parameters from caller's frame
+    ASTNode* param = node->data.func_decl.params;
+    int paramNum = 0;
+    
+    while (param) {
+        if (param->type == NODE_PARAM_LIST) {
+            if (param->data.param_list.param->type == NODE_PARAM) {
+                char* paramName = param->data.param_list.param->data.param.name;
+                int offset = addVar(paramName);  // ✅ This returns the offset
                 
-                        // Load from caller's frame (above our frame)
-                        fprintf(output, "    lw $t0, %d($sp)\n", 100 + (paramNum + 1) * 4);
-                        int offset = getVarOffset(paramName);
-                        fprintf(output, "    sw $t0, %d($sp)  # Store param %s\n", offset, paramName);
-                    }
-                    param = param->data.param_list.next;
-                    paramNum++;
-                } else if (param->type == NODE_PARAM) {
-                    char* paramName = param->data.param.name;
-                    addVar(paramName);
-            
-                    fprintf(output, "    lw $t0, %d($sp)\n", 100 + (paramNum + 1) * 4);
-                    int offset = getVarOffset(paramName);
+                // Load from caller's frame: 100 (our frame) + 4 (caller's offset)
+                fprintf(output, "    lw $t0, %d($sp)\n", 100 + 4 + (paramNum * 4));
                 fprintf(output, "    sw $t0, %d($sp)  # Store param %s\n", offset, paramName);
-                    break;
-                } else {
-                    break;
-                }
+                
+                paramNum++;
             }
-    
-            genStmt(node->data.func_decl.body);
+            param = param->data.param_list.next;
+        } else if (param->type == NODE_PARAM) {
+            char* paramName = param->data.param.name;
+            int offset = addVar(paramName);
+            
+            fprintf(output, "    lw $t0, %d($sp)\n", 100 + 4 + (paramNum * 4));
+            fprintf(output, "    sw $t0, %d($sp)  # Store param %s\n", offset, paramName);
+            break;
+        } else {
             break;
         }
+    }
+    
+    genStmt(node->data.func_decl.body);
+    break;
+}
+
         case NODE_BLOCK: {
             // Process all statements in the block
             genStmt(node->data.block.stmts);
@@ -497,18 +504,41 @@ void genStmt(ASTNode* node) {
             break;
         }
         
-        case NODE_FUNC_CALL: {
-            tempReg = 0;  // ✅ ADD THIS LINE
-            genExpr(node);
-            // Result is ignored for statement-level calls
-            tempReg = 0;  // ✅ ADD THIS LINE
+case NODE_FUNC_CALL: {
+    fprintf(output, "    # Call function: %s\n", node->data.func_call.name);
+    
+    // ✅ Evaluate and store arguments at correct offsets
+    ASTNode* arg = node->data.func_call.args;
+    int argNum = 0;
+    
+    while (arg) {
+        if (arg->type == NODE_ARG_LIST) {
+            tempReg = 0;
+            genExpr(arg->data.arg_list.expr);
+            // ✅ Store at offset 4, 8, 12, ... (starting after our frame)
+            fprintf(output, "    sw $t0, %d($sp)\n", 4 + (argNum * 4));
+            argNum++;
+            arg = arg->data.arg_list.next;
+        } else {
+            tempReg = 0;
+            genExpr(arg);
+            fprintf(output, "    sw $t0, %d($sp)\n", 4 + (argNum * 4));
             break;
         }
+    }
+    
+    fprintf(output, "    jal %s\n", node->data.func_call.name);
+    fprintf(output, "    move $t0, $v0\n");
+    tempReg = 0;
+    break;
+}
 
         default:
             break;
     }
 }
+
+// Helper function - add this before generateMIPS()
 
 void generateMIPS(ASTNode* root, const char* filename) {
     output = fopen(filename, "w");
@@ -517,29 +547,14 @@ void generateMIPS(ASTNode* root, const char* filename) {
         exit(1);
     }
     
-    // Initialize symbol table
     initSymTab();
     
-    // MIPS program header
-    fprintf(output, ".data\n");
-    fprintf(output, "\n.text\n");
-    fprintf(output, ".globl main\n");
-    fprintf(output, "main:\n");
+    fprintf(output, ".data\n\n");
+    fprintf(output, ".text\n");
+    fprintf(output, ".globl main\n\n");
     
-    // Allocate stack space (max 100 variables * 4 bytes)
-    fprintf(output, "    # Allocate stack space\n");
-    fprintf(output, "    addi $sp, $sp, -400\n\n");
-    
-    
-    // Generate code for statements
+    // ✅ Just generate everything - let functions create their own labels
     genStmt(root);
-    
-    // Program exit
-    fprintf(output, "\n    # Exit program\n");
-    fprintf(output, "    addi $sp, $sp, 400\n");
-    fprintf(output, "    li $v0, 10\n");
-    fprintf(output, "    syscall\n");
     
     fclose(output);
 }
-
