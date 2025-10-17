@@ -443,9 +443,7 @@ void genStmt(ASTNode* node) {
     fprintf(output, "\n%s:\n", node->data.func_decl.name);
     fprintf(output, "    # Function: %s\n", node->data.func_decl.name);
     
-    // Reset symbol table for each function
-    initSymTab();  // ✅ IMPORTANT - reset BEFORE adding params
-    
+    // Special handling for main
     if (strcmp(node->data.func_decl.name, "main") == 0) {
         fprintf(output, "    addi $sp, $sp, -400\n");
     }
@@ -453,29 +451,31 @@ void genStmt(ASTNode* node) {
     fprintf(output, "    addi $sp, $sp, -100\n");
     fprintf(output, "    sw $ra, 0($sp)\n");
     
-    // Load parameters from caller's frame
+    // ✅ Load parameters from CALLER's frame (100 bytes up from current $sp)
     ASTNode* param = node->data.func_decl.params;
     int paramNum = 0;
+    int paramOffset = 4;  // Start at offset 4 in OUR frame (0 is $ra)
     
     while (param) {
         if (param->type == NODE_PARAM_LIST) {
             if (param->data.param_list.param->type == NODE_PARAM) {
                 char* paramName = param->data.param_list.param->data.param.name;
-                int offset = addVar(paramName);  // ✅ This returns the offset
+                addVar(paramName);
                 
-                // Load from caller's frame: 100 (our frame) + 4 (caller's offset)
+                // ✅ Load from caller's frame: 100 (our frame) + 4 (caller's offset)
                 fprintf(output, "    lw $t0, %d($sp)\n", 100 + 4 + (paramNum * 4));
-                fprintf(output, "    sw $t0, %d($sp)  # Store param %s\n", offset, paramName);
+                fprintf(output, "    sw $t0, %d($sp)  # Store param %s\n", paramOffset, paramName);
                 
                 paramNum++;
+                paramOffset += 4;
             }
             param = param->data.param_list.next;
         } else if (param->type == NODE_PARAM) {
             char* paramName = param->data.param.name;
-            int offset = addVar(paramName);
+            addVar(paramName);
             
             fprintf(output, "    lw $t0, %d($sp)\n", 100 + 4 + (paramNum * 4));
-            fprintf(output, "    sw $t0, %d($sp)  # Store param %s\n", offset, paramName);
+            fprintf(output, "    sw $t0, %d($sp)  # Store param %s\n", paramOffset, paramName);
             break;
         } else {
             break;
