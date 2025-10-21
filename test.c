@@ -1,9 +1,9 @@
-int Function (int a, int b) {
+float Function (float a, float b) {
     return a + b;
 }
 
 int main() {
-    int c = Function(3, 4);
+    float c = Function(3.3, 4.4);
     print(c);
     return 0;
 }

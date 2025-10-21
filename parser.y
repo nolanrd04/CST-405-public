@@ -25,14 +25,16 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
  */
 %union {
     int num;                /* For integer literals */
+    float fnum;         /* For float literals */
     char* str;              /* For identifiers */
     struct ASTNode* node;   /* For AST nodes */
 }
 
 /* TOKEN DECLARATIONS with their semantic value types */
 %token <num> NUM        /* Number token carries an integer value */
+%token <fnum> FNUM      /* Float number token carries a float value */
 %token <str> ID         /* Identifier token carries a string */
-%token INT PRINT        /* Keywords have no semantic value */
+%token INT PRINT FLOAT        /* Keywords have no semantic value */
 %token RETURN           /* Added RETURN token */
 %token VOID             /* Added VOID token for functions with no return*/
 
@@ -101,6 +103,14 @@ func_decl:
         $$ = createFuncDecl("int", $2, NULL, $5); /* Function with no parameters */
         free($2);
     }
+    | FLOAT ID '(' param_list ')' block {
+        $$ = createFuncDecl("float", $2, $4, $6);
+        free($2);
+    }
+    | FLOAT ID '(' ')' block {
+        $$ = createFuncDecl("float", $2, NULL, $5);
+        free($2);
+    }
     | VOID ID '(' ')' block {
         $$ = createFuncDecl("void", $2, NULL, $5); /* Void function with no parameters */
         free($2);
@@ -119,6 +129,10 @@ param_list:
 param:
     INT ID {
         $$ = createParam("int", $2); /* Create parameter node */
+        free($2);
+    }
+    | FLOAT ID {  /* ✅ ADD THIS */
+        $$ = createParam("float", $2);
         free($2);
     }
     ;
@@ -165,8 +179,13 @@ decl:
     INT ID ';' { 
 
         /* Create declaration node and free the identifier string */
-        $$ = createDecl($2);  /* $2 is the ID token's string value; stored in the symbol table; returns into $$, which is a pointer to a sub tree. */
+        $$ = createDecl("int", $2);  /* $2 is the ID token's string value; stored in the symbol table; returns into $$, which is a pointer to a sub tree. */
         free($2);             /* Free the string copy from scanner */
+    }
+    /* Add float support */
+    | FLOAT ID ';' {
+        $$ = createDecl("float", $2);
+        free($2);
     }
 
     /* ##### ONE DIMENSIONAL ARRAYS ##### */
@@ -232,6 +251,14 @@ declAssign:
         free($2);
     }
 
+    |
+    FLOAT ID '=' expr';' { 
+
+        /* Create declaration node and free the identifier string */
+        $$ = createDeclAssign("float", $2, $4);  /* $2 is the ID token's string value; stored in the symbol table; returns into $$, which is a pointer to a sub tree. */
+        free($2);             /* Free the string copy from scanner */
+    }
+
     /*array of length num with assignment */
     | INT ID '[' NUM ']' '=' '{' arrayExpr '}' ';'
     {
@@ -257,7 +284,11 @@ declAssign:
 expr:
     NUM { 
         /* Literal number */
-        $$ = createNum($1);  /* Create leaf node with number value */
+        $$ = createNum($1, 0);  /* Create leaf node with number value */
+    }
+    | FNUM { 
+        /* Literal float number */
+        $$ = createNum($1, 1);  /* Create leaf node with float value */
     }
     | ID { 
         /* Variable reference */

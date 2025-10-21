@@ -21,7 +21,13 @@ void genExpr(ASTNode* node) {
     
     switch(node->type) {
         case NODE_NUM:
-            fprintf(output, "    li $t%d, %d\n", getNextTemp(), node->data.num);
+            if(node->data.num.is_float) {
+                fprintf(output, "    li.s $f0, %.6f\n", node->data.num.value.fval);
+                tempReg = 0; // Floating point handling can be expanded as needed
+            } else {
+                fprintf(output, "    li $t%d, %d\n", tempReg, node->data.num.value.ival);
+                tempReg++;
+            }
             break;
             
         case NODE_VAR: {
@@ -29,32 +35,66 @@ void genExpr(ASTNode* node) {
             if (offset == -1) {
                 fprintf(stderr, "Error: Variable %s not declared\n", node->data.name);
                 exit(1);
+            }    
+            char* type = getVarType(node->data.name);
+            if (type && strcmp(type, "float") == 0) {
+                fprintf(output, "    lwc1 $f0, %d($sp)\n", offset);
+                tempReg = 0;
+            } else {
+                fprintf(output, "    lw $t%d, %d($sp)\n", getNextTemp(), offset);
             }
-            fprintf(output, "    lw $t%d, %d($sp)\n", getNextTemp(), offset);
             break;
         }
         
-        case NODE_BINOP:
-            genExpr(node->data.binop.left);
-            int leftReg = tempReg - 1;
-            genExpr(node->data.binop.right);
-            int rightReg = tempReg - 1;
+        case NODE_BINOP: {
+            // ✅ Check if operands are floats BEFORE generating left
+            int isFloat = (node->data.binop.left->type == NODE_NUM && 
+                   node->data.binop.left->data.num.is_float) ||
+                  (node->data.binop.right->type == NODE_NUM && 
+                   node->data.binop.right->data.num.is_float) ||
+                  (node->data.binop.left->type == NODE_VAR) ||
+                  (node->data.binop.right->type == NODE_VAR);
 
-            if (node->data.binop.op == '+') {
-                fprintf(output, "    add $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-            } else if (node->data.binop.op == '-') {
-                fprintf(output, "    sub $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-            } else if (node->data.binop.op == '*') {
-                fprintf(output, "    mul $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-            } else if (node->data.binop.op == '/') {
-                fprintf(output, "    div $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+            if (isFloat) {
+                // Float operations
+                genExpr(node->data.binop.left);
+                fprintf(output, "    mov.s $f2, $f0\n");  // Save left in $f2
+                genExpr(node->data.binop.right);
+                // Right is in $f0
+        
+                if (node->data.binop.op == '+') {
+                    fprintf(output, "    add.s $f0, $f2, $f0\n");
+                } else if (node->data.binop.op == '-') {
+                    fprintf(output, "    sub.s $f0, $f2, $f0\n");
+                } else if (node->data.binop.op == '*') {
+                    fprintf(output, "    mul.s $f0, $f2, $f0\n");
+                } else if (node->data.binop.op == '/') {
+                    fprintf(output, "    div.s $f0, $f2, $f0\n");
+                }
             } else {
-                fprintf(stderr, "Error: unsupported binary op '%c'\n", node->data.binop.op);
-                exit(1);
-            }
+                // Integer operations
+                genExpr(node->data.binop.left);  // ✅ Generate left ONCE
+                int leftReg = tempReg - 1;
+                genExpr(node->data.binop.right);
+                int rightReg = tempReg - 1;
 
-            tempReg = leftReg + 1;
+                if (node->data.binop.op == '+') {
+                    fprintf(output, "    add $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                } else if (node->data.binop.op == '-') {
+                    fprintf(output, "    sub $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                } else if (node->data.binop.op == '*') {
+                    fprintf(output, "    mul $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                } else if (node->data.binop.op == '/') {
+                    fprintf(output, "    div $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                } else {
+                    fprintf(stderr, "Error: unsupported binary op '%c'\n", node->data.binop.op);
+                    exit(1);
+                }
+
+                tempReg = leftReg + 1;
+            }
             break;
+        }
         
         case NODE_ARRAY_ACCESS: {
             /* index -> temp (genExpr leaves result in last temp) */
@@ -189,45 +229,58 @@ void genExpr(ASTNode* node) {
         }
 
         case NODE_FUNC_CALL: {
-    fprintf(output, "    # Call function: %s\n", node->data.func_call.name);
+            fprintf(output, "    # Call function: %s\n", node->data.func_call.name);
     
-    // Evaluate and store arguments at correct offsets
-    ASTNode* arg = node->data.func_call.args;
-    int argNum = 0;
+            // Evaluate and store arguments at correct offsets
+            ASTNode* arg = node->data.func_call.args;
+            int argNum = 0;
     
-    while (arg) {
-        if (arg->type == NODE_ARG_LIST) {
+            while (arg) {
+                if (arg->type == NODE_ARG_LIST) {
+                    tempReg = 0;
+                    genExpr(arg->data.arg_list.expr);
+
+                    if(arg->data.arg_list.expr->type == NODE_NUM && arg->data.arg_list.expr->data.num.is_float) {
+                        fprintf(output, "    swc1 $f0, %d($sp)\n", 4 + (argNum * 4));
+                        
+                    }
+                    else {
+                        fprintf(output, "    sw $t0, %d($sp)\n", 4 + (argNum * 4));
+                    }
+
+                    argNum++;
+                    arg = arg->data.arg_list.next;
+            } else {
+                tempReg = 0;
+                genExpr(arg);
+
+                if (arg->type == NODE_NUM && arg->data.num.is_float) {
+                    fprintf(output, "    swc1 $f0, %d($sp)\n", 4 + (argNum * 4));
+                } else {
+                    fprintf(output, "    sw $t0, %d($sp)\n", 4 + (argNum * 4));
+                }
+
+                break;
+            }
+            }
+    
+            fprintf(output, "    jal %s\n", node->data.func_call.name);
+            fprintf(output, "    move $t0, $v0\n");
             tempReg = 0;
-            genExpr(arg->data.arg_list.expr);  // ✅ Changed from .arg to .expr
-            // Store at offset 4, 8, 12, ... (starting after our frame)
-            fprintf(output, "    sw $t0, %d($sp)\n", 4 + (argNum * 4));
-            argNum++;
-            arg = arg->data.arg_list.next;
-        } else {
-            tempReg = 0;
-            genExpr(arg);
-            fprintf(output, "    sw $t0, %d($sp)\n", 4 + (argNum * 4));
             break;
         }
-    }
-    
-    fprintf(output, "    jal %s\n", node->data.func_call.name);
-    fprintf(output, "    move $t0, $v0\n");
-    tempReg = 0;
-    break;
-}
 
-        default:
-            break;
+            default:
+                break;
+        }
     }
-}
 
 void genStmt(ASTNode* node) {
     if (!node) return;
     
     switch(node->type) {
         case NODE_DECL: {
-            int offset = addVar(node->data.name);
+            int offset = addVar(node->data.decl.varName, node->data.decl.varType);
             if (offset == -1) {
                 fprintf(stderr, "Error: Variable %s already declared\n", node->data.name);
                 exit(1);
@@ -237,7 +290,7 @@ void genStmt(ASTNode* node) {
         }
         case NODE_DECL_ASSIGN: {
             // Declare the variable
-            int offset = addVar(node->data.declAssign.id);
+            int offset = addVar(node->data.declAssign.id, node->data.declAssign.type);
             if (offset == -1) {
                 fprintf(stderr, "Error: Variable %s already declared\n", node->data.declAssign.id);
                 exit(1);
@@ -246,8 +299,12 @@ void genStmt(ASTNode* node) {
             tempReg = 0;
             // Generate code for the initializer expression
             genExpr(node->data.declAssign.expr);
-            // Store the result in the variable's stack slot
-            fprintf(output, "    sw $t0, %d($sp)\n", offset);
+            char* type = getVarType(node->data.declAssign.id);
+            if (type && strcmp(type, "float") == 0) {
+                fprintf(output, "    swc1 $f0, %d($sp)\n", offset);
+            } else {
+                fprintf(output, "    sw $t0, %d($sp)\n", offset);
+            }
             tempReg = 0;
             break;
         }
@@ -258,23 +315,50 @@ void genStmt(ASTNode* node) {
                 exit(1);
             }
             genExpr(node->data.assign.value);
-            fprintf(output, "    sw $t0, %d($sp)\n", offset);
+            char* type = getVarType(node->data.assign.var);
+            if (type && strcmp(type, "float") == 0) {
+                fprintf(output, "    swc1 $f0, %d($sp)\n", offset);
+            } else {
+                fprintf(output, "    sw $t0, %d($sp)\n", offset);
+            }
             tempReg = 0;
             break;
         }
         
-        case NODE_PRINT:
+        case NODE_PRINT:{
+            tempReg = 0;
             genExpr(node->data.expr);
-            fprintf(output, "    # Print integer\n");
-            fprintf(output, "    move $a0, $t%d\n", tempReg - 1);
-            fprintf(output, "    li $v0, 1\n");
-            fprintf(output, "    syscall\n");
+    
+            // Check if we're printing a float
+            int isFloat = 0;
+            if (node->data.expr->type == NODE_NUM && node->data.expr->data.num.is_float) {
+                isFloat = 1;
+            } else if (node->data.expr->type == NODE_VAR) {
+                char* type = getVarType(node->data.expr->data.name);
+                if (type && strcmp(type, "float") == 0) {
+                    isFloat = 1;
+                }
+            }
+    
+            if (isFloat) {
+                fprintf(output, "    # Print float\n");
+                fprintf(output, "    mov.s $f12, $f0\n");
+                fprintf(output, "    li $v0, 2\n");  // Syscall 2 = print float
+                fprintf(output, "    syscall\n");
+            } else {
+                fprintf(output, "    # Print integer\n");
+                fprintf(output, "    move $a0, $t%d\n", tempReg - 1);
+                fprintf(output, "    li $v0, 1\n");
+                fprintf(output, "    syscall\n");
+            }
+    
             fprintf(output, "    # Print newline\n");
             fprintf(output, "    li $v0, 11\n");
             fprintf(output, "    li $a0, 10\n");
             fprintf(output, "    syscall\n");
             tempReg = 0;
             break;
+        }
             
         case NODE_STMT_LIST:
             genStmt(node->data.stmtlist.stmt);
@@ -440,52 +524,66 @@ void genStmt(ASTNode* node) {
         }
 
         case NODE_FUNC_DECL: {
-    fprintf(output, "\n%s:\n", node->data.func_decl.name);
-    fprintf(output, "    # Function: %s\n", node->data.func_decl.name);
-    initSymTab();
+            fprintf(output, "\n%s:\n", node->data.func_decl.name);
+            fprintf(output, "    # Function: %s\n", node->data.func_decl.name);
+            initSymTab();
 
-    addVar("$ra_slot");  // Reserve space for return address
+            addVar("$ra_slot", "int");  // Reserve space for return address
 
-    // Special handling for main
-    if (strcmp(node->data.func_decl.name, "main") == 0) {
-        fprintf(output, "    addi $sp, $sp, -400\n");
-    }
-    
-    fprintf(output, "    addi $sp, $sp, -100\n");
-    fprintf(output, "    sw $ra, 0($sp)\n");
-    
-    // ✅ Load parameters from CALLER's frame (100 bytes up from current $sp)
-    ASTNode* param = node->data.func_decl.params;
-    int paramNum = 0;
-    
-    while (param) {
-        if (param->type == NODE_PARAM_LIST) {
-            if (param->data.param_list.param->type == NODE_PARAM) {
-                char* paramName = param->data.param_list.param->data.param.name;
-                int offset = addVar(paramName);
-                
-                // ✅ Load from caller's frame: 100 (our frame) + 4 (caller's offset)
-                fprintf(output, "    lw $t0, %d($sp)\n", 100 + 4 + (paramNum * 4));
-                fprintf(output, "    sw $t0, %d($sp)  # Store param %s\n", offset, paramName);
-                
-                paramNum++;
+            // Special handling for main
+            if (strcmp(node->data.func_decl.name, "main") == 0) {
+                fprintf(output, "    addi $sp, $sp, -400\n");
             }
-            param = param->data.param_list.next;
-        } else if (param->type == NODE_PARAM) {
-            char* paramName = param->data.param.name;
-            int offset = addVar(paramName);
+    
+            fprintf(output, "    addi $sp, $sp, -100\n");
+            fprintf(output, "    sw $ra, 0($sp)\n");
+    
+            // Load parameters from CALLER's frame
+            ASTNode* param = node->data.func_decl.params;
+            int paramNum = 0;
+    
+            while (param) {
+                if (param->type == NODE_PARAM_LIST) {
+                    if (param->data.param_list.param->type == NODE_PARAM) {
+                        char* paramName = param->data.param_list.param->data.param.name;
+                        char* paramType = param->data.param_list.param->data.param.type;  // ✅ Get type
+                        int offset = addVar(paramName, paramType);
+                
+                        // ✅ Check if parameter is float
+                        if (strcmp(paramType, "float") == 0) {
+                            // Float parameter
+                            fprintf(output, "    lwc1 $f0, %d($sp)\n", 100 + 4 + (paramNum * 4));
+                            fprintf(output, "    swc1 $f0, %d($sp)  # Store param %s (float)\n", offset, paramName);
+                        } else {
+                            // Integer parameter
+                            fprintf(output, "    lw $t0, %d($sp)\n", 100 + 4 + (paramNum * 4));
+                            fprintf(output, "    sw $t0, %d($sp)  # Store param %s (int)\n", offset, paramName);
+                        }
+                
+                        paramNum++;
+                    }
+                    param = param->data.param_list.next;
+                } else if (param->type == NODE_PARAM) {
+                    char* paramName = param->data.param.name;
+                    char* paramType = param->data.param.type;  // ✅ Get type
+                    int offset = addVar(paramName, paramType);
             
-            fprintf(output, "    lw $t0, %d($sp)\n", 100 + 4 + (paramNum * 4));
-            fprintf(output, "    sw $t0, %d($sp)  # Store param %s\n", offset, paramName);
-            break;
-        } else {
+                    if (strcmp(paramType, "float") == 0) {
+                        fprintf(output, "    lwc1 $f0, %d($sp)\n", 100 + 4 + (paramNum * 4));
+                        fprintf(output, "    swc1 $f0, %d($sp)  # Store param %s (float)\n", offset, paramName);
+                    } else {
+                        fprintf(output, "    lw $t0, %d($sp)\n", 100 + 4 + (paramNum * 4));
+                        fprintf(output, "    sw $t0, %d($sp)  # Store param %s (int)\n", offset, paramName);
+                    }
+                    break;
+                } else {
+                    break;
+                }
+            }
+    
+            genStmt(node->data.func_decl.body);
             break;
         }
-    }
-    
-    genStmt(node->data.func_decl.body);
-    break;
-}
 
         case NODE_BLOCK: {
             // Process all statements in the block
@@ -505,41 +603,41 @@ void genStmt(ASTNode* node) {
             break;
         }
         
-case NODE_FUNC_CALL: {
-    fprintf(output, "    # Call function: %s\n", node->data.func_call.name);
+        case NODE_FUNC_CALL: {
+            fprintf(output, "    # Call function: %s\n", node->data.func_call.name);
     
-    // ✅ Evaluate and store arguments at correct offsets
-    ASTNode* arg = node->data.func_call.args;
-    int argNum = 0;
+            // ✅ Evaluate and store arguments at correct offsets
+            ASTNode* arg = node->data.func_call.args;
+            int argNum = 0;
     
-    while (arg) {
-        if (arg->type == NODE_ARG_LIST) {
+            while (arg) {
+                if (arg->type == NODE_ARG_LIST) {
+                    tempReg = 0;
+                    genExpr(arg->data.arg_list.expr);
+                    // ✅ Store at offset 4, 8, 12, ... (starting after our frame)
+                    fprintf(output, "    sw $t0, %d($sp)\n", 4 + (argNum * 4));
+                    argNum++;
+                    arg = arg->data.arg_list.next;
+                } else {
+                    tempReg = 0;
+                    genExpr(arg);
+                    fprintf(output, "    sw $t0, %d($sp)\n", 4 + (argNum * 4));
+                    break;
+                }
+            }
+    
+            fprintf(output, "    jal %s\n", node->data.func_call.name);
+            fprintf(output, "    move $t0, $v0\n");
             tempReg = 0;
-            genExpr(arg->data.arg_list.expr);
-            // ✅ Store at offset 4, 8, 12, ... (starting after our frame)
-            fprintf(output, "    sw $t0, %d($sp)\n", 4 + (argNum * 4));
-            argNum++;
-            arg = arg->data.arg_list.next;
-        } else {
-            tempReg = 0;
-            genExpr(arg);
-            fprintf(output, "    sw $t0, %d($sp)\n", 4 + (argNum * 4));
             break;
         }
-    }
-    
-    fprintf(output, "    jal %s\n", node->data.func_call.name);
-    fprintf(output, "    move $t0, $v0\n");
-    tempReg = 0;
-    break;
+
+            default:
+                break;
+        }
 }
 
-        default:
-            break;
-    }
-}
 
-// Helper function - add this before generateMIPS()
 
 void generateMIPS(ASTNode* root, const char* filename) {
     output = fopen(filename, "w");

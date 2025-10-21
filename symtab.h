@@ -17,6 +17,7 @@ typedef struct {
     int arraySize;  /* Size of the array if isArray is 1 */
     int array2DSizeX;
     int array2DSizeY;
+    char* type;
 } Symbol;
 
 /* SYMBOL TABLE STRUCTURE */
@@ -28,8 +29,9 @@ typedef struct {
 
 /* SYMBOL TABLE OPERATIONS */
 void initSymTab();               /* Initialize empty symbol table */
-int addVar(char* name);          /* Add new variable, returns offset or -1 if duplicate */
+int addVar(char* name, char* type);          /* Add new variable, returns offset or -1 if duplicate */
 int getVarOffset(char* name);    /* Get stack offset for variable, -1 if not found */
+char* getVarType(char* name);
 int isVarDeclared(char* name);   /* Check if variable exists (1=yes, 0=no) */
 int addArrayVar(char* name, int size); /* Add new array variable, returns offset or -1 if duplicate */
 int isArrayVar(char* name);      /* Check if variable is an array (1=yes, 0=no) */

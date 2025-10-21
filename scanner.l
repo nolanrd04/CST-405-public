@@ -16,6 +16,7 @@
 
  /* key words */
 "int"           { return INT; }
+"float"         { return FLOAT; }
 "print"         { return PRINT; }
 "return"        { return RETURN;}
 "void"          { return VOID; }
@@ -31,6 +32,8 @@
     yylval.num = atoi(yytext);
     return NUM; 
 }
+
+[0-9]+\.[0-9]+  { yylval.fnum = atof(yytext); return FNUM; }
 
 "-"             { return '-'; }
 "+"             { return '+'; }

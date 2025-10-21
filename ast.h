@@ -48,10 +48,22 @@ typedef struct ASTNode {
     /* Union allows same memory to store different data types */
     union {
         /* Literal number value (NODE_NUM) */
-        int num;
+        struct {
+            int is_float; /* 1 if float, 0 if int */
+            union {
+                int ival;      /* Integer value */
+                double fval;   /* Floating-point value */
+            } value;
+        } num;
         
-        /* Variable or declaration name (NODE_VAR, NODE_DECL) */
+        /* Variable reference (NODE_VAR) */
         char* name;
+
+        /* Variable declaration (NODE_DECL) */
+        struct {
+            char* varName;
+            char* varType;
+        } decl;
         
         /* Binary operation structure (NODE_BINOP) */
         struct {
@@ -185,10 +197,10 @@ typedef struct ASTNode {
 /* AST CONSTRUCTION FUNCTIONS
  * These functions are called by the parser to build the tree
  */
-ASTNode* createNum(int value);                                   /* Create number node */
+ASTNode* createNum(double value, int isFloat);                                   /* Create number node */
 ASTNode* createVar(char* name);                                  /* Create variable node */
 ASTNode* createBinOp(char op, ASTNode* left, ASTNode* right);   /* Create binary op node */
-ASTNode* createDecl(char* name);                                 /* Create declaration node */
+ASTNode* createDecl(char* varType, char* name);                                 /* Create declaration node */
 ASTNode* createAssign(char* var, ASTNode* value);               /* Create assignment node */
 ASTNode* createPrint(ASTNode* expr);                            /* Create print node */
 ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2);  
@@ -218,6 +230,7 @@ ASTNode* createBlock(ASTNode* stmts);                             /* Block of st
 ASTNode* createReturn(ASTNode* value);                            /* Return statement */
 ASTNode* createFuncCall(char* name, ASTNode* args);               /* Function call */
 ASTNode* createArgList(ASTNode* expr, ASTNode* next);             /* Argument list */
+
 
 
 /* AST DISPLAY FUNCTION */

@@ -18,7 +18,7 @@ void initSymTab() {
 }
 
 /* Add a new variable to the symbol table */
-int addVar(char* name) {
+int addVar(char* name, char* type) {
     /* Check for duplicate declaration */
     if (isVarDeclared(name)) {
         return -1;  /* Error: variable already exists */
@@ -26,6 +26,7 @@ int addVar(char* name) {
     
     /* Add new symbol entry */
     symtab.vars[symtab.count].name = strdup(name);
+    symtab.vars[symtab.count].type = strdup(type);
     symtab.vars[symtab.count].offset = symtab.nextOffset;
     
     /* Advance offset by 4 bytes (size of int in MIPS) */
@@ -50,6 +51,16 @@ int getVarOffset(char* name) {
 /* Check if a variable has been declared */
 int isVarDeclared(char* name) {
     return getVarOffset(name) != -1;  /* True if found, false otherwise */
+}
+
+char* getVarType(char* name) {
+    /* Linear search through symbol table */
+    for (int i = 0; i < symtab.count; i++) {
+        if (strcmp(symtab.vars[i].name, name) == 0) {
+            return symtab.vars[i].type;  /* Return the type */
+        }
+    }
+    return NULL;  /* Variable not found */
 }
 
 /* ##### ARRAYS ##### */

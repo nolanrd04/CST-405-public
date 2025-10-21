@@ -75,7 +75,11 @@ char* generateTACExpr(ASTNode* node) {
     switch(node->type) {
         case NODE_NUM: {
             char* temp = malloc(20);
-            sprintf(temp, "%d", node->data.num);
+            if (node->data.num.is_float) {
+                sprintf(temp, "%.6f", node->data.num.value.fval);  // ✅ Float with 6 decimal places
+            } else {
+                sprintf(temp, "%d", node->data.num.value.ival);    // ✅ Integer
+            }
             return temp;
         }
         

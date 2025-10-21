@@ -8,10 +8,15 @@
 #include "ast.h"
 
 /* Create a number literal node */
-ASTNode* createNum(int value) {
+ASTNode* createNum(double value, int isFloat) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_NUM;
-    node->data.num = value;  /* Store the integer value */
+    node->data.num.is_float = isFloat;
+    if (isFloat) {
+        node->data.num.value.fval = value;
+    } else {
+        node->data.num.value.ival = (int)value;
+    }
     return node;
 }
 
@@ -34,10 +39,11 @@ ASTNode* createBinOp(char op, ASTNode* left, ASTNode* right) {
 }
 
 /* Create a variable declaration node */
-ASTNode* createDecl(char* name) {
+ASTNode* createDecl(char* varType, char* name) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_DECL;
-    node->data.name = strdup(name);  /* Store variable name */
+    node->data.decl.varName = strdup(name);  /* Store variable name */
+    node->data.decl.varType = strdup(varType);  /* Store variable type */
     return node;
 }
 
@@ -226,7 +232,11 @@ void printAST(ASTNode* node, int level) {
     /* Print node based on its type */
     switch(node->type) {
         case NODE_NUM:
-            printf("NUM: %d\n", node->data.num);
+            if (node->data.num.is_float) {
+                printf("NUM (float): %f\n", node->data.num.value.fval);
+            } else {
+                printf("NUM (int): %d\n", node->data.num.value.ival);
+            }
             break;
         case NODE_VAR:
             printf("VAR: %s\n", node->data.name);
