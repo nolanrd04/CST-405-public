@@ -98,6 +98,7 @@ typedef struct ASTNode {
         struct {
             char* name;     /*Array name */
             int size;       /* Array Size*/
+            char* type;
         }array_decl;
 
         /* Array assignment structure (NODE_ARRAY_ASSIGN) */

@@ -193,6 +193,7 @@ decl:
     | INT ID '[' NUM ']' ';'
     {
         $$ = createArrayDeclOfLength("int", $2, $4);/* done */
+        addArrayVar($2, $4, "int");
         free($2);
     }
 
@@ -200,8 +201,22 @@ decl:
     /* 2D array element of length NUM x NUM */
     | INT ID '[' NUM ']' '[' NUM ']' ';'
     {
-        addArray2DVar($2, $4, $7);
+        addArray2DVar($2, $4, $7, "int");
         $$ = create2DArrayDeclOfLength("int", $2, $4, $7); /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
+        free($2);
+    }
+    |
+    FLOAT ID '[' NUM ']' ';'
+    {
+        $$ = createArrayDeclOfLength("float", $2, $4);/* done */
+        addArrayVar($2, $4, "float");
+        free($2);
+    }
+    |
+    FLOAT ID '[' NUM ']' '[' NUM ']' ';'
+    {
+        addArray2DVar($2, $4, $7, "float");
+        $$ = create2DArrayDeclOfLength("float", $2, $4, $7); /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
         free($2);
     }
     ;
@@ -217,21 +232,6 @@ assign:
     | ID '=' expr ';' { 
         $$ = createAssign($1, $3);  
         free($1);
-    }
-
-    /* 2D arrays */
-    /*assign all rows and values to a 2d array */
-    | ID '='  '{' '}' ';'
-    {
-        /* not implemented, might not.*/
-        free($1);
-    }
-    /* assign a whole array (row)(y) to an X index. For example: list2D [0][] = {1, 2, 3}; list2D [1][] = {4, 5, 6}; would be [1, 2, 3],[4, 5, 6] */
-    | ID '[' expr ']' '[' ']' '=' arrayExpr ';'
-    {
-        /* not implemented, might not. */
-        /* $$ createArray2DRowAssign($1, $3, $8); */
-        free ($1);
     }
     /* assign a single element at a time */
     | ID '[' expr ']' '[' expr ']' '=' expr ';'
@@ -271,11 +271,16 @@ declAssign:
         $$ = createArrayDeclAssign("int", $2, 0, $7);/* done */
         free($2);
     }
-
-    /* 2D array of unknown length with assignment */
-    | INT ID '[' ']' '[' ']' '=' '{' arrayExpr2D '}' ';' 
+    |
+    FLOAT ID '[' NUM ']' '=' '{' arrayExpr '}' ';'
     {
-        /* $$ = create2DArrayDeclAssign("int", $2, 0, 0, $9); */ /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
+        $$ = createArrayAssign("float", $2, $4, $8);/* done */
+        free($2);
+    }
+    |
+    FLOAT ID '[' ']' '=' '{' arrayExpr '}' ';'
+    {
+        $$ = createArrayDeclAssign("float", $2, 0, $7);/* done */
         free($2);
     }
     ;

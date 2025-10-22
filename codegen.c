@@ -125,7 +125,15 @@ void genExpr(ASTNode* node) {
             fprintf(output, "    lw    $t%d, 0($t%d)     # load array element\n",
                     resReg, addrReg);
 
-            /* leave result in last temp (tempReg already advanced) */
+            char* type = getVarType(node->data.array_access.name);
+            if (type && strcmp(type, "float") == 0) {
+                // Load float
+                fprintf(output, "    lwc1 $f0, 0($t%d)     # load float value\n", addrReg);
+                tempReg = 0;
+            } else {
+                // Load int
+                fprintf(output, "    lw    $t%d, 0($t%d)     # load int value\n", resReg, addrReg);
+            }
             break;
         }
 
@@ -159,8 +167,16 @@ void genExpr(ASTNode* node) {
                     baseReg, baseOffset, node->data.array_assign.name);
             fprintf(output, "    addu  $t%d, $t%d, $t%d  # element address\n",
                     addrReg, baseReg, idxReg);
-            fprintf(output, "    sw    $t%d, 0($t%d)     # store value\n",
-                    valReg, addrReg);
+
+            // Check array type
+            char* type = getVarType(node->data.array_assign.name);
+            if (type && strcmp(type, "float") == 0) {
+                // Store float
+                fprintf(output, "    swc1 $f0, 0($t%d)     # store float value\n", addrReg);
+            } else {
+                // Store int
+                fprintf(output, "    sw    $t%d, 0($t%d)     # store int value\n", valReg, addrReg);
+            }
 
             tempReg = 0;
             break;
@@ -221,8 +237,17 @@ void genExpr(ASTNode* node) {
             // Calculate final address
             fprintf(output, "    addu $t%d, $t%d, $t%d # final address\n", addrReg, baseReg, offsetReg);
     
-            // Load the value
-            fprintf(output, "    lw $t%d, 0($t%d)      # load array[i][j]\n", resultReg, addrReg);
+            // Load the value    char* type = getVarType(node->data.array_access.name);
+            
+            char* type = getVarType(node->data.array_2d_access.name);
+            if (type && strcmp(type, "float") == 0) {
+                // Load float
+                fprintf(output, "    lwc1 $f0, 0($t%d)     # load float value\n", addrReg);
+                tempReg = 0;
+            } else {
+                // Load int
+                fprintf(output, "    lw    $t%d, 0($t%d)     # load int value\n", resultReg, addrReg);
+            }
     
             tempReg = resultReg + 1;
             break;
@@ -338,6 +363,16 @@ void genStmt(ASTNode* node) {
                 if (type && strcmp(type, "float") == 0) {
                     isFloat = 1;
                 }
+            } else if (node->data.expr->type == NODE_ARRAY_ACCESS) {
+                char* type = getVarType(node->data.expr->data.array_access.name);
+                if (type && strcmp(type, "float") == 0) {
+                    isFloat = 1;
+                }
+            } else if (node->data.expr->type == NODE_ARRAY_2D_ACCESS) {
+                char* type = getVarType(node->data.expr->data.array_2d_access.name);
+                if (type && strcmp(type, "float") == 0) {
+                    isFloat = 1;
+                }
             }
     
             if (isFloat) {
@@ -367,7 +402,7 @@ void genStmt(ASTNode* node) {
             
         case NODE_ARRAY_DECL:
         {
-            int offset = addArrayVar(node->data.array_decl.name, node->data.array_decl.size);
+            int offset = addArrayVar(node->data.array_decl.name, node->data.array_decl.size, node->data.array_decl.type);
             if (offset == -1) {
                 fprintf(stderr, "Error: Array %s already declared\n", node->data.array_decl.name);
                 exit(1);
@@ -406,8 +441,12 @@ void genStmt(ASTNode* node) {
                     baseReg, baseOffset, node->data.array_assign.name);
             fprintf(output, "    addu  $t%d, $t%d, $t%d  # element address\n",
                     addrReg, baseReg, idxReg);
-            fprintf(output, "    sw    $t%d, 0($t%d)     # store value\n",
-                    valReg, addrReg);
+            char* type = getVarType(node->data.array_assign.name);
+            if (type && strcmp(type, "float") == 0) {
+                fprintf(output, "    swc1 $f0, 0($t%d)     # store float value\n", addrReg);
+            } else {
+                fprintf(output, "    sw    $t%d, 0($t%d)     # store int value\n", valReg, addrReg);
+            }
 
             tempReg = 0;
             break;
@@ -446,7 +485,7 @@ void genStmt(ASTNode* node) {
                 size = count; // Infer size
             }
 
-            int offset = addArrayVar(node->data.array_decl_assign.name, size);
+            int offset = addArrayVar(node->data.array_decl_assign.name, size, node->data.array_decl_assign.type);
             if (offset == -1) { 
                 fprintf(stderr, "Error: Variable %s already declared\n", node->data.array_decl_assign.name); 
                 exit(1); 
@@ -465,7 +504,12 @@ void genStmt(ASTNode* node) {
                 fprintf(output, "    addiu $t1, $sp, %d      # base address\n", offset);
                 fprintf(output, "    li    $t2, %d           # offset = %d * 4\n", i * 4, i);
                 fprintf(output, "    addu  $t3, $t1, $t2    # element address\n");
-                fprintf(output, "    sw    $t0, 0($t3)      # store value\n");
+                char* type = node->data.array_decl_assign.type;
+                if (type && strcmp(type, "float") == 0) {
+                    fprintf(output, "    swc1 $f0, 0($t3)      # store float value\n");
+                } else {
+                    fprintf(output, "    sw    $t0, 0($t3)      # store int value\n");
+                }
             }
     
             tempReg = 0; // Reset for next statement
@@ -473,7 +517,7 @@ void genStmt(ASTNode* node) {
         }
         case NODE_ARRAY_2D_DECL:
         {
-            int offset = addArray2DVar(node->data.array_2d_decl.name, node->data.array_2d_decl.sizeX, node->data.array_2d_decl.sizeY); /* change to 2d array add */
+            int offset = addArray2DVar(node->data.array_2d_decl.name, node->data.array_2d_decl.sizeX, node->data.array_2d_decl.sizeY, node->data.array_2d_decl.type); /* change to 2d array add */
                 if (offset == -1) {
                     fprintf(stderr, "Error: Array %s already declared\n", node->data.array_2d_decl.name);
                     exit(1);
@@ -517,7 +561,13 @@ void genStmt(ASTNode* node) {
             fprintf(output, "    sll $t4, $t4, 2       # multiply by 4\n");
             fprintf(output, "    addiu $t5, $sp, %d    # base address\n", baseOffset);
             fprintf(output, "    addu $t6, $t5, $t4    # final address\n");
-            fprintf(output, "    sw $t%d, 0($t6)       # store value\n", valReg);
+
+            char* type = getVarType(node->data.array_2d_elem_assign.name);
+            if (type && strcmp(type, "float") == 0) {
+                fprintf(output, "    swc1 $f0, 0($t6)       # store float value\n");
+            } else {
+                fprintf(output, "    sw $t%d, 0($t6)       # store int value\n", valReg);
+            }
 
             tempReg = 0;
             break;

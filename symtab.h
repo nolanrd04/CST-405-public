@@ -33,10 +33,10 @@ int addVar(char* name, char* type);          /* Add new variable, returns offset
 int getVarOffset(char* name);    /* Get stack offset for variable, -1 if not found */
 char* getVarType(char* name);
 int isVarDeclared(char* name);   /* Check if variable exists (1=yes, 0=no) */
-int addArrayVar(char* name, int size); /* Add new array variable, returns offset or -1 if duplicate */
+int addArrayVar(char* name, int size, char* type); /* Add new array variable, returns offset or -1 if duplicate */
 int isArrayVar(char* name);      /* Check if variable is an array (1=yes, 0=no) */
 int getArraySize(char* name);    /* Get size of array */
-int addArray2DVar(char* name, int sizeX, int sizeY);
+int addArray2DVar(char* name, int sizeX, int sizeY, char* type);
 int getArray2DSizeX(char* name);
 int getArray2DSizeY(char* name);
 int is2DArrayVar(char* name);

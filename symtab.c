@@ -64,7 +64,7 @@ char* getVarType(char* name) {
 }
 
 /* ##### ARRAYS ##### */
-int addArrayVar(char* name, int size) {
+int addArrayVar(char* name, int size, char* type) {
     /* Check for duplicate declaration */
     if (isVarDeclared(name)) {
         printf("SYMTAB ERROR: Variable %s already declared\n", name);
@@ -76,6 +76,7 @@ int addArrayVar(char* name, int size) {
     symtab.vars[symtab.count].offset = symtab.nextOffset;
     symtab.vars[symtab.count].isArray = 1; // Mark as array
     symtab.vars[symtab.count].arraySize = size; // Store array size
+    symtab.vars[symtab.count].type = strdup(type);
     
     /* Advance offset by size * 4 bytes (size of int in MIPS) */
     symtab.nextOffset += size * 4;
@@ -107,7 +108,7 @@ int getArraySize(char* name) {
     return 0;  /* Variable not found */
 }
 
-int addArray2DVar(char* name, int sizeX, int sizeY)
+int addArray2DVar(char* name, int sizeX, int sizeY, char* type)
 {
     /* Check for duplicate declaration */
     if (isVarDeclared(name)) {
@@ -121,6 +122,7 @@ int addArray2DVar(char* name, int sizeX, int sizeY)
     symtab.vars[symtab.count].isArray = 1; // Mark as array
     symtab.vars[symtab.count].array2DSizeX = sizeX;
     symtab.vars[symtab.count].array2DSizeY = sizeY;
+    symtab.vars[symtab.count].type = strdup(type);
     
     /* Advance offset by size^2 * 4 bytes (size of int in MIPS) */
     symtab.nextOffset += (sizeX * sizeY) * 4;
