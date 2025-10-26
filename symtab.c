@@ -182,3 +182,28 @@ const Symbol* lookupSymbol(const char* name) {
     }
     return NULL; // Not found
 }
+
+/* Print the contents of the symbol table */
+void printSymTab() {
+    printf("SYMBOL TABLE:\n");
+    printf("-------------------------------------------------------------\n");
+    printf("| %-10s | %-10s | %-10s | %-10s |\n", "Name", "Type", "Offset", "Details");
+    printf("-------------------------------------------------------------\n");
+
+    for (int i = 0; i < symtab.count; i++) {
+        Symbol* sym = &symtab.vars[i];
+        printf("| %-10s | %-10s | %-10d | ", sym->name, sym->type, sym->offset);
+
+        if (sym->isArray) {
+            if (sym->array2DSizeX > 0 && sym->array2DSizeY > 0) {
+                printf("2D Array [%d][%d]\n", sym->array2DSizeX, sym->array2DSizeY);
+            } else {
+                printf("Array [%d]\n", sym->arraySize);
+            }
+        } else {
+            printf("Variable\n");
+        }
+    }
+
+    printf("-------------------------------------------------------------\n");
+}

@@ -7,6 +7,7 @@
 #include "ast.h"
 #include "codegen.h"
 #include "tac.h"
+#include "symtab.h"
 
 extern int yyparse();
 extern FILE* yyin;
@@ -96,6 +97,8 @@ int main(int argc, char* argv[]) {
         printf("║                  COMPILATION SUCCESSFUL!                   ║\n");
         printf("║         Run the output file in a MIPS simulator           ║\n");
         printf("╚════════════════════════════════════════════════════════════╝\n");
+        printf("\n");
+        printSymTab();
     } else {
         printf("✗ Parse failed - check your syntax!\n");
         printf("Common errors:\n");

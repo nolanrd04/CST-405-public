@@ -9,11 +9,34 @@ extern TACList optimizedList;  // to access the optimized TAC list
 
 FILE* output;
 int tempReg = 0;
+char* currentFunctionType = NULL;
 
 int getNextTemp() {
     int reg = tempReg;
     tempReg = (tempReg + 1) % 8;  // Wrap around after $t7
     return reg;
+}
+
+int isExprFloat(ASTNode* node) {
+    if (!node) return 0;
+    
+    switch(node->type) {
+        case NODE_NUM:
+            return node->data.num.is_float;
+        case NODE_VAR: {
+            char* type = getVarType(node->data.name);
+            return (type && strcmp(type, "float") == 0);
+        }
+        case NODE_BINOP:
+            return isExprFloat(node->data.binop.left) || isExprFloat(node->data.binop.right);
+        case NODE_ARRAY_ACCESS:
+        case NODE_ARRAY_2D_ACCESS: {
+            char* type = getVarType(node->data.array_access.name);
+            return (type && strcmp(type, "float") == 0);
+        }
+        default:
+            return 0;
+    }
 }
 
 void genExpr(ASTNode* node) {
@@ -47,37 +70,43 @@ void genExpr(ASTNode* node) {
         }
         
         case NODE_BINOP: {
-            // ✅ Check if operands are floats BEFORE generating left
-            int isFloat = (node->data.binop.left->type == NODE_NUM && 
-                   node->data.binop.left->data.num.is_float) ||
-                  (node->data.binop.right->type == NODE_NUM && 
-                   node->data.binop.right->data.num.is_float) ||
-                  (node->data.binop.left->type == NODE_VAR) ||
-                  (node->data.binop.right->type == NODE_VAR);
+            int isFloat = isExprFloat(node);
 
             if (isFloat) {
-                // Float operations
                 genExpr(node->data.binop.left);
-                fprintf(output, "    mov.s $f2, $f0\n");  // Save left in $f2
-                genExpr(node->data.binop.right);
-                // Right is in $f0
+                // Save $f0 to stack temporarily
+                fprintf(output, "    addi $sp, $sp, -4\n");
+                fprintf(output, "    swc1 $f0, 0($sp)\n");
         
-                if (node->data.binop.op == '+') {
-                    fprintf(output, "    add.s $f0, $f2, $f0\n");
-                } else if (node->data.binop.op == '-') {
-                    fprintf(output, "    sub.s $f0, $f2, $f0\n");
-                } else if (node->data.binop.op == '*') {
-                    fprintf(output, "    mul.s $f0, $f2, $f0\n");
-                } else if (node->data.binop.op == '/') {
-                    fprintf(output, "    div.s $f0, $f2, $f0\n");
-                }
-            } else {
-                // Integer operations
-                genExpr(node->data.binop.left);  // ✅ Generate left ONCE
-                int leftReg = tempReg - 1;
                 genExpr(node->data.binop.right);
-                int rightReg = tempReg - 1;
+                // Right is in $f0, move to $f2
+                fprintf(output, "    mov.s $f2, $f0\n");
+        
+                // Restore left from stack to $f4
+                fprintf(output, "    lwc1 $f4, 0($sp)\n");
+                fprintf(output, "    addi $sp, $sp, 4\n");
 
+                if (node->data.binop.op == '+') {
+                    fprintf(output, "    add.s $f0, $f4, $f2\n");
+                } else if (node->data.binop.op == '-') {
+                    fprintf(output, "    sub.s $f0, $f4, $f2\n");
+                } else if (node->data.binop.op == '*') {
+                    fprintf(output, "    mul.s $f0, $f4, $f2\n");
+                } else if (node->data.binop.op == '/') {
+                    fprintf(output, "    div.s $f0, $f4, $f2\n");
+                } else {
+                    fprintf(stderr, "Error: unsupported binary op '%c' for float\n", node->data.binop.op);
+                    exit(1);
+                }
+                tempReg = 0;
+            } else {
+                int leftReg, rightReg;
+                genExpr(node->data.binop.left);
+                leftReg = tempReg - 1;
+                genExpr(node->data.binop.right);
+                rightReg = tempReg - 1;
+                if (leftReg < 0) leftReg = 0;
+                if (rightReg < 0) rightReg = 0;
                 if (node->data.binop.op == '+') {
                     fprintf(output, "    add $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
                 } else if (node->data.binop.op == '-') {
@@ -87,10 +116,9 @@ void genExpr(ASTNode* node) {
                 } else if (node->data.binop.op == '/') {
                     fprintf(output, "    div $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
                 } else {
-                    fprintf(stderr, "Error: unsupported binary op '%c'\n", node->data.binop.op);
+                    fprintf(stderr, "Error: unsupported binary op '%c' for int\n", node->data.binop.op);
                     exit(1);
                 }
-
                 tempReg = leftReg + 1;
             }
             break;
@@ -353,40 +381,21 @@ void genStmt(ASTNode* node) {
         case NODE_PRINT:{
             tempReg = 0;
             genExpr(node->data.expr);
-    
-            // Check if we're printing a float
-            int isFloat = 0;
-            if (node->data.expr->type == NODE_NUM && node->data.expr->data.num.is_float) {
-                isFloat = 1;
-            } else if (node->data.expr->type == NODE_VAR) {
-                char* type = getVarType(node->data.expr->data.name);
-                if (type && strcmp(type, "float") == 0) {
-                    isFloat = 1;
-                }
-            } else if (node->data.expr->type == NODE_ARRAY_ACCESS) {
-                char* type = getVarType(node->data.expr->data.array_access.name);
-                if (type && strcmp(type, "float") == 0) {
-                    isFloat = 1;
-                }
-            } else if (node->data.expr->type == NODE_ARRAY_2D_ACCESS) {
-                char* type = getVarType(node->data.expr->data.array_2d_access.name);
-                if (type && strcmp(type, "float") == 0) {
-                    isFloat = 1;
-                }
-            }
-    
+
+            // ✅ Use the helper function to determine if expression is float
+            int isFloat = isExprFloat(node->data.expr);
             if (isFloat) {
                 fprintf(output, "    # Print float\n");
                 fprintf(output, "    mov.s $f12, $f0\n");
                 fprintf(output, "    li $v0, 2\n");  // Syscall 2 = print float
                 fprintf(output, "    syscall\n");
             } else {
+                int printReg = tempReg > 0 ? tempReg - 1 : 0;
                 fprintf(output, "    # Print integer\n");
-                fprintf(output, "    move $a0, $t%d\n", tempReg - 1);
+                fprintf(output, "    move $a0, $t%d\n", printReg);
                 fprintf(output, "    li $v0, 1\n");
                 fprintf(output, "    syscall\n");
             }
-    
             fprintf(output, "    # Print newline\n");
             fprintf(output, "    li $v0, 11\n");
             fprintf(output, "    li $a0, 10\n");
@@ -642,11 +651,17 @@ void genStmt(ASTNode* node) {
         }
         
         case NODE_RETURN: {
-            // Evaluate return expression and put in $v0
             genExpr(node->data.ret.value);
-            fprintf(output, "    move $v0, $t0\n");  // Return value in $v0
-            
-            // Restore and return
+            char* type = NULL;
+            if (currentFunctionType) type = currentFunctionType;
+            if (!type && node->data.ret.value->type == NODE_NUM && node->data.ret.value->data.num.is_float) {
+                type = "float";
+            }
+            if (type && strcmp(type, "float") == 0) {
+                fprintf(output, "    mov.s $f0, $f0\n");  // Float return value
+            } else {
+                fprintf(output, "    move $v0, $t0\n");  // Integer return value
+            }
             fprintf(output, "    lw $ra, 0($sp)\n");
             fprintf(output, "    addi $sp, $sp, 100\n");
             fprintf(output, "    jr $ra\n");
@@ -686,7 +701,6 @@ void genStmt(ASTNode* node) {
                 break;
         }
 }
-
 
 
 void generateMIPS(ASTNode* root, const char* filename) {

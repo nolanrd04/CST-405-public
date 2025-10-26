@@ -41,6 +41,6 @@ int getArray2DSizeX(char* name);
 int getArray2DSizeY(char* name);
 int is2DArrayVar(char* name);
 const Symbol* lookupSymbol(const char* name);
-
+void printSymTab();
 
 #endif

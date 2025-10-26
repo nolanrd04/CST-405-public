@@ -40,7 +40,7 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 
 
 /* NON-TERMINAL TYPES - Define what type each grammar rule returns */
-%type <node> program stmt_list stmt decl assign declAssign expr print_stmt arrayExpr arrayExpr2D
+%type <node> program stmt_list stmt decl assign declAssign expr print_stmt arrayExpr
 %type <node> func_decl param_list param block return_stmt func_call arg_list
 
 /* OPERATOR PRECEDENCE AND ASSOCIATIVITY */
@@ -287,6 +287,11 @@ declAssign:
 
 /* EXPRESSION RULES - Build expression trees */
 expr:
+    '(' expr ')' { 
+        /* Parenthesized expression - just pass up the inner expression */
+        $$ = $2;  /* $2 is the expr inside the parentheses */
+    }
+    |
     NUM { 
         /* Literal number */
         $$ = createNum($1, 0);  /* Create leaf node with number value */
@@ -349,14 +354,14 @@ arrayExpr:
     }
     ;
 
-/* 2D array expression list */
+/* 2D array expression list 
 arrayExpr2D:
     '{' arrayExpr '}' {
-        /* $$ = create2DExprList($2, NULL); */ /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
+        /* $$ = create2DExprList($2, NULL); */ /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c 
     }
     | arrayExpr2D ',' '{' arrayExpr '}' {
-        /* $$ = create2DExprList($4, $1); */ /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
-    }
+        /* $$ = create2DExprList($4, $1); */ /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c 
+    }*/
     ;
 
 %%
