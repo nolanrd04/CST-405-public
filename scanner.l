@@ -48,6 +48,12 @@
 "{"             { return '{'; }
 "}"             { return '}'; }
 ","             { return ','; }
+"switch"        {return SWITCH; }
+"case"          { return CASE; }
+"default"       { return DEFAULT; }
+"break"         { returm PRINT; }
+":"             { return ':' ; }
+
 
 
 [ \t\n]         { }

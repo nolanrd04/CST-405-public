@@ -12,6 +12,7 @@
 /* SYMBOL ENTRY - Information about each variable */
 typedef struct {
     char* name;     /* Variable identifier */
+    char* type;     /* Variable type (int, float, etc.) - ADDED THIS */
     int offset;     /* Stack offset in bytes (for MIPS stack frame) */
     int isArray;    /* 1 if variable is an array, 0 otherwise */
     int arraySize;  /* Size of the array if isArray is 1 */
@@ -52,6 +53,9 @@ void enterScope();               /* Enter a new scope level */
 void exitScope();                /* Exit current scope level */
 int getCurrentScope();         /* Get current scope level */
 int isVarDeclaredInCurrentScope(char* name); /* Check if variable is declared in current scope */
+
+/* NEW: Print symbol table for debugging */
+void printSymTab();
 
 /* Function symbol table operations*/
 typedef struct{

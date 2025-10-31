@@ -1,10 +1,29 @@
-float Function (float a, float b) {
-    return a + b;
+int add(int x, int y) {
+    int result;
+    result = x + y;
+    return result;
+}
+
+int multiply(int x, int y) {
+    int result;
+    result = x * y;
+    return result;
 }
 
 int main() {
-    float array[2][3];
-    array[1][1] = 3.45256;
-    print(array[1][1]);
+    int a;
+    int b;
+    int sum;
+    int product;
+    
+    a = 5;
+    b = 3;
+    
+    sum = add(a, b);
+    product = multiply(a, b);
+    
+    print(sum);
+    print(product);
+    
     return 0;
 }

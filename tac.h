@@ -27,15 +27,32 @@ typedef enum {
     TAC_ARRAY_2D_DECL,
     TAC_ARRAY_2D_ACCESS,
 
-    /* function-related */
-    TAC_FUNC_DECL,      /* Function declaration */
-    TAC_FUNC_BEGIN,     /* Mark start of function body */
-    TAC_FUNC_END,       /* Mark end of function */
-    TAC_PARAM,          /* Function parameter */
-    TAC_CALL,           /* Function call: result = call funcName */
-    TAC_ARG,            /* Pass argument: arg argValue */
-    TAC_RETURN,         /* Return: return arg1 */
-    TAC_LABEL
+    /*Function*/
+    TAC_FUNC_DECL,   /* Function declaration */
+    TAC_FUNC_BEGIN,    /* Function begin */
+    TAC_FUNC_END,      /* Function end */
+    TAC_PARAM,         /* Function parameter */
+    TAC_CALL,          /* Function call */\
+    TAC_ARG,           /* Function argument */
+    TAC_RETURN,         /* Return statement */
+    TAC_LABEL ,         /* Label for jumps */
+    TAC_ENTER_SCOPE , /* Enter new scope */
+    TAC_EXIT_SCOPE,    /* Exit scope */
+
+    /*Control Flow*/
+    TAC_LABEL,        /* Label for jumps */
+    TAC_GOTO ,       /* Unconditional jump */
+    TAC_IF_FALSE,    /* Conditional jump */
+    TAC_LT,          /* Less than comparison */
+    TAC_GT ,         /* Greater than comparison */
+    TAC_EQ ,         /* Equality comparison */
+    TAC_NE ,        /* Not equal comparison */
+
+    /*Switch Specific*/
+    TAC_SWITCH,    /* Switch statement */
+    TAC_CASE,      /* Case statement */
+    TAC_DEFAULT      /* Default case */
+
 } TACOp;
 
 /* TAC INSTRUCTION STRUCTURE */
@@ -61,6 +78,12 @@ TACInstr* createTAC(TACOp op, char* arg1, char* arg2, char* result); /* Create T
 void appendTAC(TACInstr* instr);                                  /* Add instruction to list */
 void generateTAC(ASTNode* node);                                  /* Convert AST to TAC */
 char* generateTACExpr(ASTNode* node);                             /* Generate TAC for expression */
+
+/*Function Specific TAC generation*/
+void generateFunctionTAC(ASTNode* node);                       /* Generate TAC for functions */
+void generateParamTac(ASTNode* node, char* funcName);          /*Generate TAC for parameters*/
+void generateFuncCallTAC(ASTNode* node,char** resultTemp);     /* Generate TAC for function calls */
+void generateArgListTAC(ASTNode* node);                           /* Generate TAC for arguments */
 
 /* TAC OPTIMIZATION AND OUTPUT */
 void printTAC();                                                   /* Display unoptimized TAC */

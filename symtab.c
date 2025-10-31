@@ -130,6 +130,7 @@ int addArrayVar(char* name, int size, char* type) {
     
     /* Add new symbol entry */
     symtab.vars[symtab.count].name = strdup(name);
+    symtab.vars[symtab.count].type = strdup(type);  /* ✅ ADDED: Set the type */
     symtab.vars[symtab.count].offset = symtab.nextOffset;
     symtab.vars[symtab.count].isArray = 1; // Mark as array
     symtab.vars[symtab.count].arraySize = size; // Store array size
@@ -296,6 +297,45 @@ char* getFunctionReturnType(char* name){
         }
     }
     return NULL; // Function not found
+}
+
+/* Add this function at the end of symtab.c, before the last closing brace */
+
+/* Print current symbol table state - for debugging/demonstration */
+void printSymTab() {
+    printf("\n╔════════════════════════════════════════════════════════════════╗\n");
+    printf("║              SYMBOL TABLE (Scope %d)                           ║\n", symtab.currentScope);
+    printf("╠════════════════════════════════════════════════════════════════╣\n");
+    printf("║ Name          | Type    | Offset | Scope | Array            ║\n");
+    printf("╠════════════════════════════════════════════════════════════════╣\n");
+    
+    if (symtab.count == 0) {
+        printf("║ (empty)                                                        ║\n");
+    } else {
+        for (int i = 0; i < symtab.count; i++) {
+            printf("║ %-13s | %-7s | %-6d | %-5d | ", 
+                   symtab.vars[i].name,
+                   symtab.vars[i].type ? symtab.vars[i].type : "?",
+                   symtab.vars[i].offset,
+                   symtab.vars[i].scope);
+            
+            if (symtab.vars[i].isArray) {
+                if (symtab.vars[i].array2DSizeX > 0 && symtab.vars[i].array2DSizeY > 0) {
+                    printf("[%d][%d]     ", symtab.vars[i].array2DSizeX, symtab.vars[i].array2DSizeY);
+                } else {
+                    printf("[%d]        ", symtab.vars[i].arraySize);
+                }
+            } else {
+                printf("No           ");
+            }
+            printf(" ║\n");
+        }
+    }
+    
+    printf("╚════════════════════════════════════════════════════════════════╝\n");
+    printf("  Total variables: %d\n", symtab.count);
+    printf("  Next offset: %d\n", symtab.nextOffset);
+    printf("  Current scope: %d\n\n", symtab.currentScope);
 }
 
 /* lookupSymbol removed: use getVarOffset/isVarDeclared/isVarDeclaredInCurrentScope
