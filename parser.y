@@ -330,42 +330,43 @@ expr:
     }
     | expr '+' expr { 
         /* Addition operation - builds binary tree */
-        $$ = createBinOp('+', $1, $3);  /* Left child, op, right child */
-    } | expr '-' expr { 
+        $$ = createBinOp(OP_ADD, $1, $3);  /* Left child, op, right child */
+    }
+    | expr '-' expr { 
         /* Subtraction operation - builds binary tree */
-        $$ = createBinOp('-', $1, $3);  /* Left child, op, right child */
+        $$ = createBinOp(OP_SUB, $1, $3);  /* Left child, op, right child */
     }
     | expr '*' expr { 
         /* Multiplication operation - builds binary tree */
-        $$ = createBinOp('*', $1, $3);  /* Left child, op, right child */
+        $$ = createBinOp(OP_MUL, $1, $3);  /* Left child, op, right child */
     }
     | expr '/' expr { 
         /* Division operation - builds binary tree */
-        $$ = createBinOp('/', $1, $3);  /* Left child, op, right child */
+        $$ = createBinOp(OP_DIV, $1, $3);  /* Left child, op, right child */
     }
     | expr EQ expr {
         /* Equality comparison */
-        $$ = createBinOp(EQ, $1, $3);
+        $$ = createBinOp(OP_EQ, $1, $3);
     }
     | expr NEQ expr {
         /* Not equal comparison */
-        $$ = createBinOp(NEQ, $1, $3);
+        $$ = createBinOp(OP_NEQ, $1, $3);
     }
     | expr LT expr {
         /* Less than comparison */
-        $$ = createBinOp(LT, $1, $3);
+        $$ = createBinOp(OP_LT, $1, $3);
     }
     | expr GT expr {
         /* Greater than comparison */
-        $$ = createBinOp(GT, $1, $3);
+        $$ = createBinOp(OP_GT, $1, $3);
     }
     | expr LTE expr {
         /* Less than or equal comparison */
-        $$ = createBinOp(LTE, $1, $3);
+        $$ = createBinOp(OP_LTE, $1, $3);
     }
     | expr GTE expr {
         /* Greater than or equal comparison */
-        $$ = createBinOp(GTE, $1, $3);
+        $$ = createBinOp(OP_GTE, $1, $3);
     }
     | func_call { 
         /* ADDED */

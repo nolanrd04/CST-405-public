@@ -1,20 +1,11 @@
 %{
-/* LEXICAL ANALYZER (SCANNER)
- * This is the first phase of compilation - breaking input into tokens
- * Flex generates a scanner from these rules that reads character by character
- */
 #include <stdio.h>
 #include <stdlib.h>
-#include "parser.tab.h"  /* Token definitions from Bison */
+#include "parser.tab.h"
 %}
-
-/* Flex options to suppress warnings for unused functions */
 %option nounput
 %option noinput
-
 %%
-
- /* key words */
 "int"           { return INT; }
 "float"         { return FLOAT; }
 "print"         { return PRINT; }
@@ -22,31 +13,23 @@
 "void"          { return VOID; }
 "if"            { return IF; }
 "else"          { return ELSE; }
-
- /* how an identifier must be structured: letter or underscore followed by any letter, number, or underscore. */
 [a-zA-Z_][a-zA-Z0-9_]* { 
     yylval.str = strdup(yytext);
     return ID; 
 }
-
-/* Numbers: float first, then int */
 [0-9]+\.[0-9]+  { yylval.fnum = atof(yytext); return FNUM; }
 [0-9]+          { yylval.num = atoi(yytext); return NUM; }
-
-/* Operators */
 "-"             { return '-'; }
 "+"             { return '+'; }
 "*"             { return '*'; }
 "/"             { return '/'; }
 "="             { return '='; }
-
 "=="            { return EQ; }
 "!="            { return NEQ; }
 ">="            { return GTE; }
 "<="            { return LTE; }
 ">"             { return GT; }
 "<"             { return LT; }
-
 ";"             { return ';'; }
 "("             { return '('; }
 ")"             { return ')'; }
@@ -55,16 +38,9 @@
 "{"             { return '{'; }
 "}"             { return '}'; }
 ","             { return ','; }
-
-
-
 [ \t\n]         { }
-
 .               { printf("Lexical Error: Unknown character '%c'\n", *yytext); }
-
 %%
-
-/* Required by Flex - signals end of input */
 int yywrap() {
-    return 1;  /* 1 means no more input files */
+    return 1;
 }
