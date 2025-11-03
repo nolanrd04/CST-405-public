@@ -15,6 +15,7 @@ typedef enum {
     NODE_DECL,      /* Variable declaration (e.g., int x) */
     NODE_ASSIGN,    /* Assignment statement (e.g., x = 10) */
     NODE_PRINT,     /* Print statement (e.g., print(x)) */
+    NODE_IF,       /* If statement (e.g., if (cond) { ... } else { ... }) */
     NODE_STMT_LIST,  /* List of statements (program structure) */
     NODE_DECL_ASSIGN, /* Variable declaration with a type */
 
@@ -37,6 +38,19 @@ typedef enum {
     NODE_FUNC_CALL,  /* Function call (e.g., foo(5)) */
     NODE_ARG_LIST    /* List of function call arguments */
 } NodeType;
+
+typedef enum {
+    OP_ADD,    // +
+    OP_SUB,    // -
+    OP_MUL,    // *
+    OP_DIV,    // /
+    OP_EQ,     // ==
+    OP_NEQ,    // !=
+    OP_LT,     // <
+    OP_GT,     // >
+    OP_LTE,    // <=
+    OP_GTE     // >=
+} BinOpType;
 
 /* AST NODE STRUCTURE
  * Uses a union to efficiently store different node data
@@ -67,7 +81,7 @@ typedef struct ASTNode {
         
         /* Binary operation structure (NODE_BINOP) */
         struct {
-            char op;                    /* Operator character ('+') */
+            BinOpType op;               /* Operator type */
             struct ASTNode* left;       /* Left operand */
             struct ASTNode* right;      /* Right operand */
         } binop;
@@ -193,6 +207,11 @@ typedef struct ASTNode {
 
 
     } data;
+
+    // General purpose pointers for constructs needing multiple sub-nodes (if statements, etc.)
+    struct ASTNode* condition;
+    struct ASTNode* left;
+    struct ASTNode* right;
 } ASTNode;
 
 /* AST CONSTRUCTION FUNCTIONS
@@ -200,10 +219,11 @@ typedef struct ASTNode {
  */
 ASTNode* createNum(double value, int isFloat);                                   /* Create number node */
 ASTNode* createVar(char* name);                                  /* Create variable node */
-ASTNode* createBinOp(char op, ASTNode* left, ASTNode* right);   /* Create binary op node */
+ASTNode* createBinOp(BinOpType op, ASTNode* left, ASTNode* right);   /* Create binary op node */
 ASTNode* createDecl(char* varType, char* name);                                 /* Create declaration node */
 ASTNode* createAssign(char* var, ASTNode* value);               /* Create assignment node */
 ASTNode* createPrint(ASTNode* expr);                            /* Create print node */
+ASTNode* createIfNode(ASTNode* condition, ASTNode* thenBranch, ASTNode* elseBranch); /* Create if statement node */
 ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2);  
       /* Create statement list */
 

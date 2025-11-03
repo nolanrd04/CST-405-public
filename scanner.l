@@ -20,6 +20,8 @@
 "print"         { return PRINT; }
 "return"        { return RETURN;}
 "void"          { return VOID; }
+"if"            { return IF; }
+"else"          { return ELSE; }
 
  /* how an identifier must be structured: letter or underscore followed by any letter, number, or underscore. */
 [a-zA-Z_][a-zA-Z0-9_]* { 
@@ -27,19 +29,24 @@
     return ID; 
 }
 
- /* how a NUM must be structured */
-[0-9]+          { 
-    yylval.num = atoi(yytext);
-    return NUM; 
-}
-
+/* Numbers: float first, then int */
 [0-9]+\.[0-9]+  { yylval.fnum = atof(yytext); return FNUM; }
+[0-9]+          { yylval.num = atoi(yytext); return NUM; }
 
+/* Operators */
 "-"             { return '-'; }
 "+"             { return '+'; }
 "*"             { return '*'; }
 "/"             { return '/'; }
 "="             { return '='; }
+
+"=="            { return EQ; }
+"!="            { return NEQ; }
+">="            { return GTE; }
+"<="            { return LTE; }
+">"             { return GT; }
+"<"             { return LT; }
+
 ";"             { return ';'; }
 "("             { return '('; }
 ")"             { return ')'; }
@@ -48,6 +55,7 @@
 "{"             { return '{'; }
 "}"             { return '}'; }
 ","             { return ','; }
+
 
 
 [ \t\n]         { }

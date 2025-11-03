@@ -19,6 +19,14 @@ typedef enum {
     TAC_PRINT,         /* Print: print(arg1) */
     TAC_DECL,          /* Declaration: declare result */
 
+    // Comparison operations
+    TAC_EQ,            // ==
+    TAC_NEQ,           // !=
+    TAC_LT,            // <
+    TAC_GT,            // >
+    TAC_LTE,           // <=
+    TAC_GTE,           // >=
+
     /* arrays */
     TAC_ARRAY_DECL,     /* Array declaration: declare array[size] */
     TAC_ARRAY_ASSIGN,  /* Array assignment: array[index] = value */
@@ -35,7 +43,9 @@ typedef enum {
     TAC_CALL,           /* Function call: result = call funcName */
     TAC_ARG,            /* Pass argument: arg argValue */
     TAC_RETURN,         /* Return: return arg1 */
-    TAC_LABEL
+    TAC_IFZ,         /* Conditional jump: if arg1 == 0 goto result */
+    TAC_GOTO,         /* Unconditional jump: goto result */
+    TAC_LABEL,        /* Label definition: result: */
 } TACOp;
 
 /* TAC INSTRUCTION STRUCTURE */
@@ -52,15 +62,18 @@ typedef struct {
     TACInstr* head;    /* First instruction */
     TACInstr* tail;    /* Last instruction (for efficient append) */
     int tempCount;     /* Counter for temporary variables (t0, t1, ...) */
+    int labelCount;    /* Counter for labels (L0, L1, ...) */
 } TACList;
 
 /* TAC GENERATION FUNCTIONS */
 void initTAC();                                                    /* Initialize TAC lists */
 char* newTemp();                                                   /* Generate new temp variable */
+char* newLabel();                                                  /* Generate new label */
 TACInstr* createTAC(TACOp op, char* arg1, char* arg2, char* result); /* Create TAC instruction */                   /* Propagate known values */
 void appendTAC(TACInstr* instr);                                  /* Add instruction to list */
 void generateTAC(ASTNode* node);                                  /* Convert AST to TAC */
 char* generateTACExpr(ASTNode* node);                             /* Generate TAC for expression */
+void generateTAC_If(ASTNode* node);                             /* Generate TAC for if statement */
 
 /* TAC OPTIMIZATION AND OUTPUT */
 void printTAC();                                                   /* Display unoptimized TAC */

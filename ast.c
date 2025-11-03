@@ -28,13 +28,13 @@ ASTNode* createVar(char* name) {
     return node;
 }
 
-/* Create a binary operation node (for addition) */
-ASTNode* createBinOp(char op, ASTNode* left, ASTNode* right) {
+/* Create a binary operation node */
+ASTNode* createBinOp(BinOpType op, ASTNode* left, ASTNode* right) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_BINOP;
-    node->data.binop.op = op;        /* Store operator (+) */
-    node->data.binop.left = left;    /* Left subtree */
-    node->data.binop.right = right;  /* Right subtree */
+    node->data.binop.op = op;
+    node->data.binop.left = left;
+    node->data.binop.right = right;
     return node;
 }
 
@@ -63,6 +63,17 @@ ASTNode* createPrint(ASTNode* expr) {
     node->data.expr = expr;  /* Expression to print */
     return node;
 }
+
+/* Create an if statement node */
+ASTNode* createIfNode(ASTNode* condition, ASTNode* thenBranch, ASTNode* elseBranch) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_IF;
+    node->condition = condition;
+    node->left = thenBranch;     // “then” block
+    node->right = elseBranch;    // “else” block (may be NULL)
+    return node;
+}
+
 
 /* Create a statement list node (links statements together) */
 ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2) {
@@ -336,6 +347,18 @@ void printAST(ASTNode* node, int level) {
                 printAST(node->data.ret.value, level + 1);
             }
             break;
+        case NODE_IF:
+            printf("IF:\n");
+            printf("  Condition:\n");
+            printAST(node->condition, level + 2);
+            printf("  Then branch:\n");
+            printAST(node->left, level + 2);
+            if (node->right) {
+                printf("  Else branch:\n");
+                printAST(node->right, level + 2);
+            }
+            break;
+
         case NODE_FUNC_CALL:
             printf("FUNC_CALL: %s\n", node->data.func_call.name);
             if (node->data.func_call.args) {

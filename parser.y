@@ -37,10 +37,12 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 %token INT PRINT FLOAT        /* Keywords have no semantic value */
 %token RETURN           /* Added RETURN token */
 %token VOID             /* Added VOID token for functions with no return*/
+%token IF ELSE          /* Added IF and ELSE tokens for conditional statements */
+%token EQ NEQ LT GT LTE GTE   /* Comparison operators */
 
 
 /* NON-TERMINAL TYPES - Define what type each grammar rule returns */
-%type <node> program stmt_list stmt decl assign declAssign expr print_stmt arrayExpr
+%type <node> program stmt_list stmt decl assign declAssign expr print_stmt arrayExpr if_stmt
 %type <node> func_decl param_list param block return_stmt func_call arg_list
 
 /* OPERATOR PRECEDENCE AND ASSOCIATIVITY */
@@ -48,6 +50,7 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 %left '-' /* Subtraction is left-associative: a-b-c = (a-b)-c */
 %left '*'
 %left '/'  /* Division is left-associative: a/b/c = (a/b)/c */
+%left EQ NEQ LT GT LTE GTE /* Comparison operators precedence */
 
 %%
 
@@ -91,6 +94,7 @@ stmt:
     | return_stmt /* Return statement */
     | block      /* Block of statements */
     | func_call ';' /* Function call statement */
+    | if_stmt /* If statement */
     ;
 
 /* (NEW) ##FUNCTION DECLARATION## */
@@ -165,6 +169,16 @@ func_call:
         free($1);
     }
     ;
+/* (NEW ) ##IF STATEMENT## */
+if_stmt:
+    IF '(' expr ')' stmt
+        { $$ = createIfNode($3, $5, NULL); /* Create if-else statement node */
+    }
+    | IF '(' expr ')' stmt ELSE stmt
+        { $$ = createIfNode($3, $5, $7); /* Create if statement node */
+    }
+    ;
+
 /* (NEW) ##ARGUMENT LIST## */
 arg_list:
     expr {
@@ -329,6 +343,30 @@ expr:
         /* Division operation - builds binary tree */
         $$ = createBinOp('/', $1, $3);  /* Left child, op, right child */
     }
+    | expr EQ expr {
+        /* Equality comparison */
+        $$ = createBinOp(EQ, $1, $3);
+    }
+    | expr NEQ expr {
+        /* Not equal comparison */
+        $$ = createBinOp(NEQ, $1, $3);
+    }
+    | expr LT expr {
+        /* Less than comparison */
+        $$ = createBinOp(LT, $1, $3);
+    }
+    | expr GT expr {
+        /* Greater than comparison */
+        $$ = createBinOp(GT, $1, $3);
+    }
+    | expr LTE expr {
+        /* Less than or equal comparison */
+        $$ = createBinOp(LTE, $1, $3);
+    }
+    | expr GTE expr {
+        /* Greater than or equal comparison */
+        $$ = createBinOp(GTE, $1, $3);
+    }
     | func_call { 
         /* ADDED */
         /* Function call as an expression */
@@ -361,8 +399,8 @@ arrayExpr2D:
     }
     | arrayExpr2D ',' '{' arrayExpr '}' {
         /* $$ = create2DExprList($4, $1); */ /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c 
-    }*/
-    ;
+    }
+    ;*/
 
 %%
 
