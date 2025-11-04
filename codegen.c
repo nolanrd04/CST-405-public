@@ -19,7 +19,7 @@ int getNextTemp() {
 
 int isExprFloat(ASTNode* node) {
     if (!node) return 0;
-    
+
     switch(node->type) {
         case NODE_NUM:
             return node->data.num.is_float;
@@ -37,6 +37,12 @@ int isExprFloat(ASTNode* node) {
         default:
             return 0;
     }
+}
+
+// Helper function to convert integer in $t register to float in $f register
+void genIntToFloatConversion(int tReg, int fReg) {
+    fprintf(output, "    mtc1 $t%d, $f%d\n", tReg, fReg);
+    fprintf(output, "    cvt.s.w $f%d, $f%d\n", fReg, fReg);
 }
 
 void genExpr(ASTNode* node) {
@@ -71,16 +77,33 @@ void genExpr(ASTNode* node) {
         
         case NODE_BINOP: {
             int isFloat = isExprFloat(node);
+            int leftIsFloat = isExprFloat(node->data.binop.left);
+            int rightIsFloat = isExprFloat(node->data.binop.right);
 
             if (isFloat) {
                 genExpr(node->data.binop.left);
-                // Save $f0 to stack temporarily
+
+                // If left operand is int but we're doing float operation, convert it
+                if (!leftIsFloat) {
+                    genIntToFloatConversion(0, 4);  // Convert $t0 to $f4
+                } else {
+                    // Left result is in $f0, move to $f4
+                    fprintf(output, "    mov.s $f4, $f0\n");
+                }
+
+                // Save $f4 to stack temporarily
                 fprintf(output, "    addi $sp, $sp, -4\n");
-                fprintf(output, "    swc1 $f0, 0($sp)\n");
+                fprintf(output, "    swc1 $f4, 0($sp)\n");
 
                 genExpr(node->data.binop.right);
-                // Right is in $f0, move to $f2
-                fprintf(output, "    mov.s $f2, $f0\n");
+
+                // If right operand is int but we're doing float operation, convert it
+                if (!rightIsFloat) {
+                    genIntToFloatConversion(0, 2);  // Convert $t0 to $f2
+                } else {
+                    // Right result is in $f0, move to $f2
+                    fprintf(output, "    mov.s $f2, $f0\n");
+                }
 
                 // Restore left from stack to $f4
                 fprintf(output, "    lwc1 $f4, 0($sp)\n");

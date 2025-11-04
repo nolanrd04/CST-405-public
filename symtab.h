@@ -12,6 +12,7 @@
 /* SYMBOL ENTRY - Information about each variable */
 typedef struct {
     char* name;     /* Variable identifier */
+    char* type;     /* Variable type ("int", "float", etc.) */
     int offset;     /* Stack offset in bytes (for MIPS stack frame) */
     int isArray;    /* 1 if variable is an array, 0 otherwise */
     int arraySize;  /* Size of the array if isArray is 1 */
