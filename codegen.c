@@ -77,25 +77,25 @@ void genExpr(ASTNode* node) {
                 // Save $f0 to stack temporarily
                 fprintf(output, "    addi $sp, $sp, -4\n");
                 fprintf(output, "    swc1 $f0, 0($sp)\n");
-        
+
                 genExpr(node->data.binop.right);
                 // Right is in $f0, move to $f2
                 fprintf(output, "    mov.s $f2, $f0\n");
-        
+
                 // Restore left from stack to $f4
                 fprintf(output, "    lwc1 $f4, 0($sp)\n");
                 fprintf(output, "    addi $sp, $sp, 4\n");
 
-                if (node->data.binop.op == '+') {
+                if (node->data.binop.op == OP_ADD) {
                     fprintf(output, "    add.s $f0, $f4, $f2\n");
-                } else if (node->data.binop.op == '-') {
+                } else if (node->data.binop.op == OP_SUB) {
                     fprintf(output, "    sub.s $f0, $f4, $f2\n");
-                } else if (node->data.binop.op == '*') {
+                } else if (node->data.binop.op == OP_MUL) {
                     fprintf(output, "    mul.s $f0, $f4, $f2\n");
-                } else if (node->data.binop.op == '/') {
+                } else if (node->data.binop.op == OP_DIV) {
                     fprintf(output, "    div.s $f0, $f4, $f2\n");
                 } else {
-                    fprintf(stderr, "Error: unsupported binary op '%c' for float\n", node->data.binop.op);
+                    fprintf(stderr, "Error: unsupported binary op for float\n");
                     exit(1);
                 }
                 tempReg = 0;
@@ -107,16 +107,32 @@ void genExpr(ASTNode* node) {
                 rightReg = tempReg - 1;
                 if (leftReg < 0) leftReg = 0;
                 if (rightReg < 0) rightReg = 0;
-                if (node->data.binop.op == '+') {
+        
+                // Arithmetic operators
+                if (node->data.binop.op == OP_ADD) {
                     fprintf(output, "    add $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-                } else if (node->data.binop.op == '-') {
-                    fprintf(output, "    sub $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-                } else if (node->data.binop.op == '*') {
+                } else if (node->data.binop.op == OP_SUB) {
+                fprintf(output, "    sub $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                } else if (node->data.binop.op == OP_MUL) {
                     fprintf(output, "    mul $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
-                } else if (node->data.binop.op == '/') {
+                } else if (node->data.binop.op == OP_DIV) {
                     fprintf(output, "    div $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                }
+                // Comparison operators
+                else if (node->data.binop.op == OP_GT) {
+                    fprintf(output, "    sgt $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                } else if (node->data.binop.op == OP_LT) {
+                    fprintf(output, "    slt $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                } else if (node->data.binop.op == OP_GTE) {
+                    fprintf(output, "    sge $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                } else if (node->data.binop.op == OP_LTE) {
+                    fprintf(output, "    sle $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                } else if (node->data.binop.op == OP_EQ) {
+                    fprintf(output, "    seq $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                } else if (node->data.binop.op == OP_NEQ) {
+                    fprintf(output, "    sne $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
                 } else {
-                    fprintf(stderr, "Error: unsupported binary op '%c' for int\n", node->data.binop.op);
+                    fprintf(stderr, "Error: unsupported binary op for int\n");
                     exit(1);
                 }
                 tempReg = leftReg + 1;
@@ -400,6 +416,40 @@ void genStmt(ASTNode* node) {
             fprintf(output, "    li $v0, 11\n");
             fprintf(output, "    li $a0, 10\n");
             fprintf(output, "    syscall\n");
+            tempReg = 0;
+            break;
+        }
+
+        case NODE_IF: {
+            // Generate a unique label for this if statement
+            static int ifCount = 0;
+            int currentIf = ifCount++;
+    
+            fprintf(output, "    # If statement\n");
+    
+            // Generate code for the condition
+            tempReg = 0;
+            genExpr(node->condition);
+            
+            // Branch if condition is false (or zero)
+            fprintf(output, "    beqz $t0, else_%d\n", currentIf);
+    
+            // Generate code for the 'then' block
+            genStmt(node->left);
+
+            // Jump over the else block
+            fprintf(output, "    j end_if_%d\n", currentIf);
+
+            // Else label
+            fprintf(output, "else_%d:\n", currentIf);
+
+            // Generate code for the 'else' block (if it exists)
+            if (node->right) {
+                genStmt(node->right);
+            }
+    
+            // End of if statement
+            fprintf(output, "end_if_%d:\n", currentIf);
             tempReg = 0;
             break;
         }

@@ -21,6 +21,7 @@ void initTAC() {
     tacList.head = NULL;
     tacList.tail = NULL;
     tacList.tempCount = 0;
+    tacList.labelCount = 0;
     optimizedList.head = NULL;
     optimizedList.tail = NULL;
 }
@@ -29,6 +30,12 @@ char* newTemp() {
     char* temp = malloc(10);
     sprintf(temp, "t%d", tacList.tempCount++);
     return temp;
+}
+
+char* newLabel() {
+    char* label = malloc(10);
+    sprintf(label, "L%d", tacList.labelCount++);
+    return strdup(label);
 }
 
 TACInstr* createTAC(TACOp op, char* arg1, char* arg2, char* result) {
@@ -90,7 +97,45 @@ char* generateTACExpr(ASTNode* node) {
             char* left = generateTACExpr(node->data.binop.left);
             char* right = generateTACExpr(node->data.binop.right);
             char* temp = newTemp();
-            
+
+            switch (node->data.binop.op) {
+                case OP_ADD:
+                    appendTAC(createTAC(TAC_ADD, left, right, temp));
+                    break;
+                case OP_SUB:
+                    appendTAC(createTAC(TAC_SUB, left, right, temp));
+                    break;
+                case OP_MUL:
+                    appendTAC(createTAC(TAC_MUL, left, right, temp));
+                    break;
+                case OP_DIV:
+                    appendTAC(createTAC(TAC_DIV, left, right, temp));
+                    break;
+
+                // Comparison operators
+                case OP_EQ:
+                    appendTAC(createTAC(TAC_EQ, left, right, temp));
+                    break;
+                case OP_NEQ:
+                    appendTAC(createTAC(TAC_NEQ, left, right, temp));
+                    break;
+                case OP_LT:
+                    appendTAC(createTAC(TAC_LT, left, right, temp));  
+                    break;
+                case OP_GT:
+                    appendTAC(createTAC(TAC_GT, left, right, temp));  
+                    break;
+                case OP_LTE:
+                    appendTAC(createTAC(TAC_LTE, left, right, temp)); 
+                    break;
+                case OP_GTE:
+                    appendTAC(createTAC(TAC_GTE, left, right, temp)); 
+                    break;
+                default:
+                    // Handles unsupported operators
+                    break;
+            }
+            /* Redundant operation handling
             if (node->data.binop.op == '+') {
                 appendTAC(createTAC(TAC_ADD, left, right, temp));
             }
@@ -104,6 +149,7 @@ char* generateTACExpr(ASTNode* node) {
             {
                 appendTAC(createTAC(TAC_MUL, left, right, temp));
             }
+            */
             
             return temp;
         }
@@ -165,6 +211,39 @@ char* generateTACExpr(ASTNode* node) {
         default:
             return NULL;
     }
+}
+
+void generateTAC_If(ASTNode* node) {
+    if (!node) return;
+
+    // Generate TAC for the condition expression
+    char* cond = generateTACExpr(node->condition);
+
+    // Create labels
+    char* labelEnd = newLabel();
+
+    if (node->right) {
+        // If-Else case
+        char* labelFalse = newLabel();
+        
+        // if condition is false, jump to false label
+        appendTAC(createTAC(TAC_IFZ, cond, NULL, labelFalse));
+
+        // Then branch
+        generateTAC(node->left);
+        appendTAC(createTAC(TAC_GOTO, NULL, NULL, labelEnd));
+
+        // Else branch
+        appendTAC(createTAC(TAC_LABEL, labelFalse, NULL, NULL));
+        generateTAC(node->right);
+    } else {
+        // If only
+        appendTAC(createTAC(TAC_IFZ, cond, NULL, labelEnd));
+        generateTAC(node->left);
+    }
+
+    // End label
+    appendTAC(createTAC(TAC_LABEL, labelEnd, NULL, NULL));
 }
 
 void generateTAC(ASTNode* node) {
@@ -320,6 +399,11 @@ void generateTAC(ASTNode* node) {
             // If it's a statement (discarded return value), handle here
             generateTACExpr(node);
             // Result is ignored for statement-level calls
+            break;
+        }
+
+        case NODE_IF: {
+            generateTAC_If(node);
             break;
         }
             

@@ -1,9 +1,20 @@
-float Function (float a, float b) {
-    return a + b;
-}
-
 int main() {
-    float num = (3.0 * 4.0) / (6.0 * 3.0);
-    print(num);
+    int x;
+    x = 10;
+
+    if (x . 5) {
+        print(x);
+    }
+    else {
+        print(0);
+    }
+
+    if (x < 5) {
+        print(x);
+    }
+    else {
+        print(0);
+    }
+
     return 0;
 }
