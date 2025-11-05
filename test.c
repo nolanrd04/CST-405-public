@@ -16,7 +16,7 @@ int main() {
 
     if (x > 5) {
         print(x);
-        int y = Add(3, 4);
+        int y = Add(3, 5);
         print(y);
     }
     else {
@@ -27,7 +27,20 @@ int main() {
         print(x);
     }
     else {
-        print(0);
+        print(2);
+    }
+
+    x = 10;
+    switch (x) {
+        case 5:
+            print(5);
+            break;
+        case 10:
+            print(10);
+            break;
+        default:
+            print(0);
+            break;
     }
 
     print((2.0 + 1) / (3.0 * 4));

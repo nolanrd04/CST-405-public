@@ -714,70 +714,77 @@ void genStmt(ASTNode* node) {
             break;
         }
         case NODE_SWITCH: {
-            fprintf(output, "\n   #Switch Statement\n");
+            fprintf(output, "\n    # Switch Statement\n");
 
-            /*EValiuate switch expression*/
-            tempReg =0;
-            genExpr( node->data.switch_stmt.expr);
-            int switchReg = tempReg -1;
+            /* Evaluate switch expression and store in switchReg */
+            tempReg = 0;
+            genExpr(node->data.switch_stmt.expr);
+            int switchReg = tempReg > 0 ? tempReg - 1 : 0;
             char* endLabel = newLabel();
 
             ASTNode* caseNode = node->data.switch_stmt.cases;
             char* defaultLabel = NULL;
 
-            /*Genreate case comparisons and jumps*/
-            while(caseNode){
-                if(caseNode->type == NODE_CASE_LIST){
-                    ASTNode* currentCase = caseNode->data.case_list.case_item;
+            fprintf(output, "    # DEBUG: caseNode = %p, type = %d\n", (void*)caseNode, caseNode ? caseNode->type : -1);
 
-                    if(currentCase->type == NODE_CASE){
-                        char* caseLabel = newLabel();
-                        int caseValue = currentCase->data.case_stmt.value;
-
-                        /*Compare and branch*/
-                        fprintf(output, "    li $t%d, %d            #Case value %d\n", tempReg, caseValue, caseValue);
-                        fprintf(output, "    beq $t%d, $t%d, %s    #If equal, jump to case\n", 
-                                switchReg, tempReg, caseLabel);
-                        
-                        /*Store label and statements for later */
-                        fprintf(output, "%s:\n", caseLabel);
-                        genStmt(currentCase->data.case_stmt.stmts);
-                        fprintf(output, "    j %s                  #Break\n", endLabel);
-                    } else if(currentCase->type == NODE_DEFAULT_CASE){
+            /* First pass: generate all comparisons for non-default cases */
+            ASTNode* currentNode = caseNode;
+            while(currentNode) {
+                if(currentNode->type == NODE_CASE_LIST) {
+                    /* Extract the case_item from the case_list */
+                    ASTNode* caseItem = currentNode->data.case_list.case_item;
+                    if(caseItem && caseItem->type == NODE_CASE) {
+                        int caseValue = caseItem->data.case_stmt.value;
+                        fprintf(output, "    li $t7, %d\n", caseValue);
+                        fprintf(output, "    beq $t%d, $t7, case_%d\n", switchReg, caseValue);
+                    } else if(caseItem && caseItem->type == NODE_DEFAULT_CASE) {
                         defaultLabel = newLabel();
-                        fprintf(output, "%s:\n", defaultLabel);
-                        genStmt(currentCase->data.default_case.stmts);
                     }
-
-                    caseNode = caseNode->data.case_list.next;
-                } else if (caseNode->type ==NODE_CASE){
-                    char* caseLabel = newLabel();
-                    int caseValue = caseNode->data.case_stmt.value;
-
-                    fprintf(output, "    li $t%d, %d            #Case value %d\n", tempReg, caseValue, caseValue);
-                    fprintf(output, "    beq $t%d, $t%d, %s    #If equal, jump to case\n", 
-                            switchReg, tempReg, caseLabel);
-                    fprintf(output, "%s:\n", caseLabel);
-                    genStmt(caseNode->data.case_stmt.stmts);
-                    fprintf(output, "    j %s                  #Break\n", endLabel);
-                    break;
-                }else if(caseNode->type == NODE_DEFAULT_CASE){
-                    defaultLabel = newLabel();
-                    fprintf(output, "%s:\n", defaultLabel);
-                    genStmt(caseNode->data.default_case.stmts);
-                    break;
+                    /* Move to next case_list node */
+                    currentNode = currentNode->data.case_list.next;
+                } else if(currentNode->type == NODE_BREAK) {
+                    /* Skip BREAK nodes - they're handled as part of the case */
+                    currentNode = currentNode->right;  /* Try to get next sibling */
+                } else {
+                    currentNode = NULL;
                 }
             }
-            /*Jump to default if no case matched*/
-            if(defaultLabel){
-                fprintf(output, "    j %s                  #Jump to default case\n", defaultLabel);
-            }
-            /*End label*/
-            fprintf(output, "%s:\n", endLabel);
-            fprintf(output, "    #End of switch statement\n");
-            break;
 
-            tempReg =0;
+            /* Jump to default if no case matched */
+            if(defaultLabel) {
+                fprintf(output, "    j %s\n", defaultLabel);
+            } else {
+                fprintf(output, "    j %s\n", endLabel);
+            }
+
+            /* Second pass: generate case labels and code */
+            currentNode = caseNode;
+            while(currentNode) {
+                if(currentNode->type == NODE_CASE_LIST) {
+                    ASTNode* caseItem = currentNode->data.case_list.case_item;
+                    if(caseItem && caseItem->type == NODE_CASE) {
+                        int caseValue = caseItem->data.case_stmt.value;
+                        fprintf(output, "case_%d:\n", caseValue);
+                        genStmt(caseItem->data.case_stmt.stmts);
+                        fprintf(output, "    j %s\n", endLabel);
+                    } else if(caseItem && caseItem->type == NODE_DEFAULT_CASE) {
+                        if(defaultLabel) {
+                            fprintf(output, "%s:\n", defaultLabel);
+                            genStmt(caseItem->data.default_case.stmts);
+                            fprintf(output, "    j %s\n", endLabel);
+                        }
+                    }
+                    currentNode = currentNode->data.case_list.next;
+                } else {
+                    currentNode = NULL;
+                }
+            }
+
+            /* End label */
+            fprintf(output, "%s:\n", endLabel);
+            fprintf(output, "    # End of switch statement\n");
+
+            tempReg = 0;
             break;
         }
         case NODE_BREAK:{
