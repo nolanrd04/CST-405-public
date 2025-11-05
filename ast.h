@@ -37,6 +37,13 @@ typedef enum {
     NODE_RETURN,     /* Return statement (e.g., return expr;) */
     NODE_FUNC_CALL,  /* Function call (e.g., foo(5)) */
     NODE_ARG_LIST    /* List of function call arguments */
+
+    /* SWITCJ Control flow nodes*/
+    ,NODE_SWITCH     /* Switch statement */
+    ,NODE_CASE_LIST  /* List of case statements */
+    ,NODE_CASE      /* Single case statement */
+    ,NODE_BREAK     /* Break statement */
+    ,NODE_DEFAULT_CASE /* Default case in switch */
 } NodeType;
 
 typedef enum {
@@ -205,7 +212,25 @@ typedef struct ASTNode {
             struct ASTNode* next;      /* Next argument in list */
         } arg_list;
 
+        /* ## NEW: Switch statement structure (NODE_SWITCH) ## */
+        struct {
+            struct ASTNode* expr;        /* Expression to switch on */
+            struct ASTNode* cases;    /* List of cases (NODE_CASE_LIST) */
+        } switch_stmt;
 
+        struct{
+            int value;                   /* Case value */
+            struct ASTNode* stmts;       /* Statements for this case */
+        } case_stmt;
+
+        struct{
+            struct ASTNode* stmts ;      /* Statements for default case */
+        } default_case;
+
+        struct{
+            struct ASTNode* case_item;   /* current case*/
+            struct ASTNode* next;        /* next case */
+        } case_list;
     } data;
 
     // General purpose pointers for constructs needing multiple sub-nodes (if statements, etc.)
@@ -252,8 +277,12 @@ ASTNode* createReturn(ASTNode* value);                            /* Return stat
 ASTNode* createFuncCall(char* name, ASTNode* args);               /* Function call */
 ASTNode* createArgList(ASTNode* expr, ASTNode* next);             /* Argument list */
 
-
-
+/* Switch statement AST */
+ASTNode* createSwitch(ASTNode* expr, ASTNode* cases);               /* Switch statement */
+ASTNode* createCase(int value, ASTNode* stmts);                     /* Single case*/
+ASTNode* createDefaultCase(ASTNode* stmts);
+ASTNode* createCaseList(ASTNode* case1, ASTNode* case2);         /* List of cases */
+ASTNode* createBreak();                                            /* Break statement */
 /* AST DISPLAY FUNCTION */
 void printAST(ASTNode* node, int level);                        /* Pretty-print the AST */
 

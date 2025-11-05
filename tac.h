@@ -13,39 +13,50 @@
 typedef enum {
     TAC_ADD,           /* Addition: result = arg1 + arg2 */
     TAC_SUB,           /* Subtraction: result = arg1 - arg2 */
-    TAC_MUL,
-    TAC_DIV,           
+    TAC_MUL,           /* Multiplication */
+    TAC_DIV,           /* Division */
     TAC_ASSIGN,        /* Assignment: result = arg1 */
     TAC_PRINT,         /* Print: print(arg1) */
     TAC_DECL,          /* Declaration: declare result */
 
-    // Comparison operations
-    TAC_EQ,            // ==
-    TAC_NEQ,           // !=
-    TAC_LT,            // <
-    TAC_GT,            // >
-    TAC_LTE,           // <=
-    TAC_GTE,           // >=
+    /* Comparison operations */
+    TAC_EQ,            /* == */
+    TAC_NEQ,           /* != */
+    TAC_LT,            /* < */
+    TAC_GT,            /* > */
+    TAC_LTE,           /* <= */
+    TAC_GTE,           /* >= */
 
-    /* arrays */
-    TAC_ARRAY_DECL,     /* Array declaration: declare array[size] */
+    /* Arrays */
+    TAC_ARRAY_DECL,    /* Array declaration: declare array[size] */
     TAC_ARRAY_ASSIGN,  /* Array assignment: array[index] = value */
-    TAC_ARRAY_ACCESS,   /* Array access: temp = array[index] */
-    TAC_ARRAY_EXPR,
-    TAC_ARRAY_2D_DECL,
-    TAC_ARRAY_2D_ACCESS,
+    TAC_ARRAY_ACCESS,  /* Array access: temp = array[index] */
+    TAC_ARRAY_EXPR,    /* Array expression */
+    TAC_ARRAY_2D_DECL, /* 2D array declaration */
+    TAC_ARRAY_2D_ACCESS, /* 2D array access */
 
-    /* function-related */
-    TAC_FUNC_DECL,      /* Function declaration */
-    TAC_FUNC_BEGIN,     /* Mark start of function body */
-    TAC_FUNC_END,       /* Mark end of function */
-    TAC_PARAM,          /* Function parameter */
-    TAC_CALL,           /* Function call: result = call funcName */
-    TAC_ARG,            /* Pass argument: arg argValue */
-    TAC_RETURN,         /* Return: return arg1 */
-    TAC_IFZ,         /* Conditional jump: if arg1 == 0 goto result */
-    TAC_GOTO,         /* Unconditional jump: goto result */
-    TAC_LABEL,        /* Label definition: result: */
+    /* Function-related */
+    TAC_FUNC_DECL,     /* Function declaration */
+    TAC_FUNC_BEGIN,    /* Mark start of function body */
+    TAC_FUNC_END,      /* Mark end of function */
+    TAC_PARAM,         /* Function parameter */
+    TAC_CALL,          /* Function call: result = call funcName */
+    TAC_ARG,           /* Pass argument: arg argValue */
+    TAC_RETURN,        /* Return: return arg1 */
+
+    /* Control flow */
+    TAC_IFZ,           /* Conditional jump: if arg1 == 0 goto result */
+    TAC_GOTO,          /* Unconditional jump: goto result */
+    TAC_LABEL,         /* Label definition: result: */
+    TAC_IF_FALSE,      /* Conditional jump if false */
+    TAC_ENTER_SCOPE,   /* Enter new scope */
+    TAC_EXIT_SCOPE,    /* Exit scope */
+
+    /* Switch-specific */
+    TAC_SWITCH,        /* Switch statement */
+    TAC_CASE,          /* Case statement */
+    TAC_DEFAULT        /* Default case */
+
 } TACOp;
 
 /* TAC INSTRUCTION STRUCTURE */
@@ -74,6 +85,12 @@ void appendTAC(TACInstr* instr);                                  /* Add instruc
 void generateTAC(ASTNode* node);                                  /* Convert AST to TAC */
 char* generateTACExpr(ASTNode* node);                             /* Generate TAC for expression */
 void generateTAC_If(ASTNode* node);                             /* Generate TAC for if statement */
+
+/*Function Specific TAC generation*/
+void generateFunctionTAC(ASTNode* node);                       /* Generate TAC for functions */
+void generateParamTac(ASTNode* node, char* funcName);          /*Generate TAC for parameters*/
+void generateFuncCallTAC(ASTNode* node,char** resultTemp);     /* Generate TAC for function calls */
+void generateArgListTAC(ASTNode* node);                           /* Generate TAC for arguments */
 
 /* TAC OPTIMIZATION AND OUTPUT */
 void printTAC();                                                   /* Display unoptimized TAC */

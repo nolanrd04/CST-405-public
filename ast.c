@@ -233,6 +233,41 @@ ASTNode* createReturn(ASTNode* value) {
     return node;
 }
 
+/* Switch statement AST nodes */
+ASTNode* createSwitch(ASTNode* expr, ASTNode* cases) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_SWITCH;
+    node->data.switch_stmt.expr = expr;   /* Expression to switch on */
+    node->data.switch_stmt.cases = cases; /* List of cases */
+    return node;
+}
+
+ASTNode* createCase(int value, ASTNode* stmts) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_CASE;
+    node->data.case_stmt.value = value;   /* Case value */
+    node->data.case_stmt.stmts = stmts;   /* Statements for this case */
+    return node;
+}
+ASTNode* createDefaultCase(ASTNode* stmts) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_DEFAULT_CASE;
+    node->data.default_case.stmts = stmts; /* Statements for default case */
+    return node;
+}
+ASTNode* createCaseList(ASTNode* case1, ASTNode* case2) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_CASE_LIST;
+    node->data.case_list.case_item = case1; /* First case */
+    node->data.case_list.next = case2; /* Next case(s) */
+    return node;
+}
+ASTNode* createBreak() {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_BREAK;
+    return node;
+}
+
 /* Display the AST structure (for debugging and education) */
 void printAST(ASTNode* node, int level) {
     if (!node) return;
@@ -370,6 +405,30 @@ void printAST(ASTNode* node, int level) {
         case NODE_ARG_LIST:
             printAST(node->data.arg_list.expr, level);
             printAST(node->data.arg_list.next, level);
+            break;
+        case NODE_SWITCH:
+            printf("SWITCH STATEMENT:\n");
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Expression:\n");
+            printAST(node->data.switch_stmt.expr, level + 2);
+            for (int i = 0; i < level +1; i++) printf("  ");
+            printf("Cases:\n");
+            printAST(node->data.switch_stmt.cases, level + 2);
+            break;
+        case NODE_CASE:
+            printf("CASE: %d\n", node->data.case_stmt.value);
+            printAST(node->data.case_stmt.stmts, level + 1);
+            break;
+        case NODE_DEFAULT_CASE:
+            printf("DEFAULT CASE:\n");
+            printAST(node->data.default_case.stmts, level + 1);
+            break;
+        case NODE_CASE_LIST:
+            printAST(node->data.case_list.case_item, level);
+            printAST(node->data.case_list.next, level);
+            break;
+        case NODE_BREAK:
+            printf("BREAK\n");
             break;
     }
 }

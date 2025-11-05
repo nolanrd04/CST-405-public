@@ -39,11 +39,13 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 %token VOID             /* Added VOID token for functions with no return*/
 %token IF ELSE          /* Added IF and ELSE tokens for conditional statements */
 %token EQ NEQ LT GT LTE GTE   /* Comparison operators */
+%token SWITCH CASE DEFAULT BREAK /* For future
 
 
 /* NON-TERMINAL TYPES - Define what type each grammar rule returns */
 %type <node> program stmt_list stmt decl assign declAssign expr print_stmt arrayExpr if_stmt
 %type <node> func_decl param_list param block return_stmt func_call arg_list
+%type <node> switch_stmt case_list case_Stmt
 
 /* OPERATOR PRECEDENCE AND ASSOCIATIVITY */
 %left '+'  /* Addition is left-associative: a+b+c = (a+b)+c */
@@ -95,6 +97,8 @@ stmt:
     | block      /* Block of statements */
     | func_call ';' /* Function call statement */
     | if_stmt /* If statement */
+    | switch_stmt /* Switch statement */
+    | BREAK ';'  { $$ = createBreak(); } /* Break statement */
     ;
 
 /* (NEW) ##FUNCTION DECLARATION## */
@@ -179,6 +183,28 @@ if_stmt:
     }
     ;
 
+/* SWITCH STATEMENT */
+switch_stmt:
+    SWITCH '(' expr ')' '{' case_list '}' {
+        $$ = createSwitch($3, $6); /* Create switch statement node */
+    }
+    ;
+case_list:
+    case_Stmt {
+        $$ = $1; /* Single case statement */
+    }
+    | case_list case_Stmt {
+        $$ = createCaseList($1, $2); /* Append case statement to list */
+    }
+    ;
+case_Stmt:
+    CASE NUM ':' stmt_list {
+        $$ = createCase($2, $4); /* Create case node */
+    }
+    | DEFAULT ':' stmt_list {
+        $$ = createDefaultCase($3); /* Create default case node */
+    }
+    ;
 /* (NEW) ##ARGUMENT LIST## */
 arg_list:
     expr {

@@ -54,6 +54,9 @@ void exitScope();                /* Exit current scope level */
 int getCurrentScope();         /* Get current scope level */
 int isVarDeclaredInCurrentScope(char* name); /* Check if variable is declared in current scope */
 
+/* NEW: Print symbol table for debugging */
+void printSymTab();
+
 /* Function symbol table operations*/
 typedef struct{
     char* name;                /* Function name */

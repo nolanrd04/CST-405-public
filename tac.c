@@ -76,6 +76,25 @@ void appendOptimizedTAC(TACInstr* instr) {
     }
 }
 
+/*Generate TAC for parameter list*/
+void generateParamListTAC(ASTNode* node, char* funcName){
+    if(!node) return;
+
+    if(node->type == NODE_PARAM){
+        //Single Parameter
+        appendTAC(createTAC(TAC_PARAM, node->data.param.type, node->data.param.name, funcName));
+    }else if (node->type == NODE_PARAM_LIST){
+        //Process first parameter
+        if (node->data.param_list.param){
+            generateParamListTAC(node->data.param_list.param, funcName);
+        }
+        //Process rest of parameters
+        if(node->data.param_list.next){
+            generateParamListTAC(node->data.param_list.next, funcName);
+        }
+    }
+}
+
 char* generateTACExpr(ASTNode* node) {
     if (!node) return NULL;
     
@@ -83,9 +102,9 @@ char* generateTACExpr(ASTNode* node) {
         case NODE_NUM: {
             char* temp = malloc(20);
             if (node->data.num.is_float) {
-                sprintf(temp, "%.6f", node->data.num.value.fval);  // ✅ Float with 6 decimal places
+                snprintf(temp, 32, "%g", node->data.num.value.fval);   // float -> string
             } else {
-                sprintf(temp, "%d", node->data.num.value.ival);    // ✅ Integer
+                snprintf(temp, 32, "%d", node->data.num.value.ival);   // int -> string
             }
             return temp;
         }
@@ -179,7 +198,6 @@ char* generateTACExpr(ASTNode* node) {
             appendTAC(createTAC(TAC_ARRAY_2D_ACCESS, combinedIndex, node->data.array_2d_access.name, temp));
             return temp;
         }
-
         case NODE_FUNC_CALL: {
             // Generate TAC for arguments first
             ASTNode* arg = node->data.func_call.args;
@@ -225,7 +243,7 @@ void generateTAC_If(ASTNode* node) {
     if (node->right) {
         // If-Else case
         char* labelFalse = newLabel();
-        
+
         // if condition is false, jump to false label
         appendTAC(createTAC(TAC_IFZ, cond, NULL, labelFalse));
 
@@ -359,27 +377,8 @@ void generateTAC(ASTNode* node) {
                                        NULL,
                                        param->data.param.name));
                     break;
-                } else {
-                    break;
                 }
             }
-            
-            // Mark function body start
-            appendTAC(createTAC(TAC_FUNC_BEGIN, NULL, NULL, node->data.func_decl.name));
-            
-            // Generate body
-            generateTAC(node->data.func_decl.body);
-            
-            // Mark function end
-            appendTAC(createTAC(TAC_FUNC_END, NULL, NULL, node->data.func_decl.name));
-            break;
-        }
-
-        case NODE_PARAM: {
-            appendTAC(createTAC(TAC_PARAM,
-                               node->data.param.type,
-                               NULL,
-                               node->data.param.name));
             break;
         }
         
@@ -387,18 +386,87 @@ void generateTAC(ASTNode* node) {
             generateTAC(node->data.block.stmts);
             break;
         }
-        
-        case NODE_RETURN: {
-            char* expr = generateTACExpr(node->data.ret.value);
-            appendTAC(createTAC(TAC_RETURN, expr, NULL, NULL));
+
+        case NODE_SWITCH: {
+            /*EValuate switch expression */
+            char* switchExpr = generateTACExpr(node->data.switch_stmt.expr);
+
+            /* Genereate end lavel */
+            char* endLabel = newTemp();
+
+            /*Process all cases*/
+            ASTNode* caseNode = node->data.switch_stmt.cases;
+            char* defaultLabel = NULL;
+
+            /*First pass: generate case comparisons*/
+            while(caseNode){
+                if(caseNode->type == NODE_CASE_LIST ){
+                    ASTNode* currentCase = caseNode->data.case_list.case_item;
+
+                    if(currentCase->type == NODE_CASE){
+                        /*Generate label for this case */
+                        char* caseLabel = newTemp();
+                        char*caseValue = malloc(20);
+                        sprintf(caseValue, "%d", currentCase->data.case_stmt.value);
+
+                        /*Compare switch expr with case value*/
+                        char* cmpResult = newTemp();
+                        appendTAC(createTAC(TAC_EQ, switchExpr, caseValue, cmpResult));
+
+                        /*If equal, goto case label*/
+                        appendTAC(createTAC(TAC_IF_FALSE, cmpResult, caseLabel, NULL));
+                        appendTAC(createTAC(TAC_GOTO, caseLabel, NULL, NULL));
+
+                        /* Store Label for later */
+                        appendTAC(createTAC(TAC_LABEL, caseLabel, NULL, NULL));
+                        generateTAC(currentCase->data.case_stmt.stmts);
+                        appendTAC(createTAC(TAC_GOTO,endLabel, NULL, NULL));
+                    }else if(currentCase->type == NODE_DEFAULT_CASE){
+                        defaultLabel = newTemp();
+                        appendTAC(createTAC(TAC_LABEL,defaultLabel,NULL,NULL));
+                        generateTAC(currentCase->data.default_case.stmts);
+                    }
+                    caseNode = caseNode->data.case_list.next;
+                
+
+                    
+                } else if(caseNode->type == NODE_CASE){
+                    /*Single case*/
+                    char* caseLabel = newTemp();
+                    char* caseValue = malloc(20);
+                    sprintf(caseValue, "%d", caseNode->data.case_stmt.value);
+
+                    /*Compare switch expr with case value*/
+                    char* cmpResult = newTemp();
+                    appendTAC(createTAC(TAC_EQ, switchExpr, caseValue, cmpResult));
+
+                    /*If equal, goto case label*/
+                    appendTAC(createTAC(TAC_IF_FALSE, cmpResult, caseLabel, NULL));
+                    appendTAC(createTAC(TAC_GOTO, caseLabel, NULL, NULL));
+
+                    /* Store Label for later */
+                    appendTAC(createTAC(TAC_LABEL, caseLabel, NULL, NULL));
+                    generateTAC(caseNode->data.case_stmt.stmts);
+                    appendTAC(createTAC(TAC_GOTO,endLabel, NULL, NULL));
+                    break;
+                }else if (caseNode->type == NODE_DEFAULT_CASE) {
+                    defaultLabel = newTemp();
+                    appendTAC(createTAC(TAC_LABEL,defaultLabel,NULL,NULL));
+                    generateTAC(caseNode->data.default_case.stmts);
+                    break;
+                }
+            }
+            /*if no case matched, jump to default or end*/
+            if(defaultLabel){
+                appendTAC(createTAC(TAC_GOTO, defaultLabel, NULL, NULL));
+            }
+            /*End label */
+            appendTAC(createTAC(TAC_LABEL, endLabel, NULL, NULL));
             break;
         }
-        
-        case NODE_FUNC_CALL: {
-            // This is handled in generateTACExpr for function calls in expressions
-            // If it's a statement (discarded return value), handle here
-            generateTACExpr(node);
-            // Result is ignored for statement-level calls
+        case NODE_BREAK:{
+            /*Break generates a goto to the end label*/
+            appendTAC(createTAC(TAC_GOTO, "break_target",NULL, NULL));
             break;
         }
 
@@ -472,29 +540,32 @@ void printTAC() {
                 printf("%s = %s[%s]", curr->result, curr->arg2, curr->arg1);
                 printf("  // 2D Array access\n");
                 break;
-            // functions
-            case TAC_FUNC_DECL:
-                printf("FUNC %s %s\n", curr->arg1, curr->result);
+            case TAC_LABEL:
+                printf("%s:", curr->arg1);
+                printf("          // Label\n");
                 break;
-            case TAC_FUNC_BEGIN:
-                printf("BEGIN_FUNC %s\n", curr->result);
+            case TAC_GOTO:
+                printf("GOTO %s", curr->arg1);
+                printf("         // Unconditional jump to %s\n", curr->arg1);
                 break;
-            case TAC_FUNC_END:
-                printf("END_FUNC %s\n", curr->result);
+            case TAC_IF_FALSE:
+                printf("IF_FALSE %s GOTO %s", curr->arg1, curr->arg2);
+                printf(" // Conditional jump\n");
                 break;
-            case TAC_PARAM:
-                printf("PARAM %s %s\n", curr->arg1, curr->result);
+            case TAC_EQ:
+                printf("%s = %s == %s", curr->result, curr->arg1, curr->arg2);
+                printf(" // Equality comparison\n");
                 break;
-            case TAC_ARG:
-                printf("ARG %s\n", curr->arg1);
+            case TAC_SWITCH:
+                printf("SWITCH %s", curr->arg1);
                 break;
-            case TAC_CALL:
-                printf("%s = CALL %s(%s args)\n", curr->result, curr->arg1, curr->arg2);
+            case TAC_CASE:
+                printf("CASE %s:", curr->arg1);
                 break;
-            case TAC_RETURN:
-                printf("RETURN %s\n", curr->arg1);
+            case TAC_DEFAULT:
+                printf("DEFAULT:");
                 break;
-        }
+        }   
         curr = curr->next;
     }
 }
@@ -790,44 +861,6 @@ void optimizeTAC() {
                 newInstr = createTAC(TAC_ARRAY_2D_ACCESS, indices, curr->arg2, curr->result);
                 break;
             }
-            case TAC_FUNC_DECL:
-                newInstr = createTAC(TAC_FUNC_DECL, curr->arg1, curr->arg2, curr->result);
-                // Reset propagation table at function boundaries
-                valueCount = 0;
-                break;
-            
-            case TAC_FUNC_BEGIN:
-                newInstr = createTAC(TAC_FUNC_BEGIN, NULL, NULL, curr->result);
-                break;
-            
-            case TAC_FUNC_END:
-                newInstr = createTAC(TAC_FUNC_END, NULL, NULL, curr->result);
-                break;
-            
-            case TAC_PARAM:
-                newInstr = createTAC(TAC_PARAM, curr->arg1, NULL, curr->result);
-                break;
-            
-            case TAC_ARG: {
-                char* value = propagateValue(curr->arg1);
-                newInstr = createTAC(TAC_ARG, value, NULL, NULL);
-                break;
-            }
-            
-            case TAC_CALL:
-                // Don't propagate through function calls (unknown side effects)
-                newInstr = createTAC(TAC_CALL, curr->arg1, curr->arg2, curr->result);
-                break;
-            
-            case TAC_RETURN: {
-                char* value = propagateValue(curr->arg1);
-                newInstr = createTAC(TAC_RETURN, value, NULL, NULL);
-                break;
-            }
-            case TAC_LABEL:
-                // Labels are just passed through, no optimization
-                newInstr = createTAC(TAC_LABEL, curr->arg1, curr->arg2, curr->result);
-                break;
 
         }
         
@@ -883,7 +916,7 @@ void printOptimizedTAC() {
                 }
                 break;
                 
-            // arrays
+            // ✅ ADD THESE MISSING CASES:
             case TAC_ARRAY_DECL:
                 printf("ARRAY_DECL %s\n", curr->result);
                 break;
@@ -899,29 +932,6 @@ void printOptimizedTAC() {
                 break;
             case TAC_ARRAY_2D_ACCESS:
                 printf("%s = %s[%s]\n", curr->result, curr->arg2, curr->arg1);
-                break;
-
-            // functions
-            case TAC_FUNC_DECL:
-                printf("FUNC %s %s\n", curr->arg1, curr->result);
-                break;
-            case TAC_FUNC_BEGIN:
-                printf("BEGIN_FUNC %s\n", curr->result);
-                break;
-            case TAC_FUNC_END:
-                printf("END_FUNC %s\n", curr->result);
-                break;
-            case TAC_PARAM:
-                printf("PARAM %s %s\n", curr->arg1, curr->result);
-                break;
-            case TAC_ARG:
-                printf("ARG %s\n", curr->arg1);
-                break;
-            case TAC_CALL:
-                printf("%s = CALL %s(%s args)\n", curr->result, curr->arg1, curr->arg2);
-                break;
-            case TAC_RETURN:
-                printf("RETURN %s\n", curr->arg1);
                 break;
                 
             default:
