@@ -583,7 +583,7 @@ void optimizeTAC() {
                 newInstr = createTAC(TAC_DECL, NULL, NULL, curr->result);
                 break;
                 
-            case TAC_ADD: // DONE
+            case TAC_ADD:
             {
                 // Check if both operands are constants
                 char* left = curr->arg1;

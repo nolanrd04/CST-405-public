@@ -27,7 +27,7 @@ int main() {
         print(x);
     }
     else {
-        print(2);
+        print(x + 5);
     }
 
     x = 10;

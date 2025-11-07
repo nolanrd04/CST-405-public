@@ -39,11 +39,32 @@ int isExprFloat(ASTNode* node) {
     }
 }
 
+// Helper function to flatten case list structure
+void collectSwitchCases(ASTNode* node, ASTNode** cases, int* caseCount, int* hasDefault, int maxCases) {
+    if (!node || *caseCount >= maxCases) return;
+    
+    if (node->type == NODE_CASE_LIST) {
+        /* Recursively collect from case_item and next */
+        collectSwitchCases(node->data.case_list.case_item, cases, caseCount, hasDefault, maxCases);
+        collectSwitchCases(node->data.case_list.next, cases, caseCount, hasDefault, maxCases);
+    } else if (node->type == NODE_CASE) {
+        cases[*caseCount] = node;
+        (*caseCount)++;
+    } else if (node->type == NODE_DEFAULT_CASE) {
+        cases[*caseCount] = node;
+        (*caseCount)++;
+        *hasDefault = 1;
+    }
+}
+
 // Helper function to convert integer in $t register to float in $f register
 void genIntToFloatConversion(int tReg, int fReg) {
     fprintf(output, "    mtc1 $t%d, $f%d\n", tReg, fReg);
     fprintf(output, "    cvt.s.w $f%d, $f%d\n", fReg, fReg);
 }
+
+void genExpr(ASTNode* node);
+
 
 void genExpr(ASTNode* node) {
     if (!node) return;
@@ -289,10 +310,10 @@ void genExpr(ASTNode* node) {
                     genExpr(arg->data.arg_list.expr);
 
                     if(arg->data.arg_list.expr->type == NODE_NUM && arg->data.arg_list.expr->data.num.is_float) {
-                        fprintf(output, "    swc1 $f0, %d($sp)\n", 4 + (argNum * 4));
+                        fprintf(output, "    swc1 $f0, %d($sp)\n", 204 + (argNum * 4));
                     } else {
                         int resultReg = tempReg > 0 ? tempReg - 1 : 0;
-                        fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, 4 + (argNum * 4));
+                        fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, 204 + (argNum * 4));
                     }
 
                     argNum++;
@@ -302,10 +323,10 @@ void genExpr(ASTNode* node) {
                     genExpr(arg);
 
                     if (arg->type == NODE_NUM && arg->data.num.is_float) {
-                        fprintf(output, "    swc1 $f0, %d($sp)\n", 4 + (argNum * 4));
+                        fprintf(output, "    swc1 $f0, %d($sp)\n", 204 + (argNum * 4));
                     } else {
                         int resultReg = tempReg > 0 ? tempReg - 1 : 0;
-                        fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, 4 + (argNum * 4));
+                        fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, 204 + (argNum * 4));
                     }
                     break;
                 }
@@ -623,11 +644,11 @@ void genStmt(ASTNode* node) {
                         int offset = addVar(paramName, paramType);
                 
                         if (strcmp(paramType, "float") == 0) {
-                            fprintf(output, "    lwc1 $f0, %d($sp)\n", 100 + 4 + (paramNum * 4));
+                            fprintf(output, "    lwc1 $f0, %d($sp)\n", 300 + 4 + (paramNum * 4));
                             fprintf(output, "    swc1 $f0, %d($sp)  # Store param %s (float) at scope %d\n", 
                                     offset, paramName, getCurrentScope());
                         } else {
-                            fprintf(output, "    lw $t0, %d($sp)\n", 100 + 4 + (paramNum * 4));
+                            fprintf(output, "    lw $t0, %d($sp)\n", 300 + 4 + (paramNum * 4));
                             fprintf(output, "    sw $t0, %d($sp)  # Store param %s (int) at scope %d\n", 
                                     offset, paramName, getCurrentScope());
                         }
@@ -641,11 +662,11 @@ void genStmt(ASTNode* node) {
                     int offset = addVar(paramName, paramType);
             
                     if (strcmp(paramType, "float") == 0) {
-                        fprintf(output, "    lwc1 $f0, %d($sp)\n", 100 + 4 + (paramNum * 4));
+                        fprintf(output, "    lwc1 $f0, %d($sp)\n", 300 + 4 + (paramNum * 4));
                         fprintf(output, "    swc1 $f0, %d($sp)  # Store param %s (float) at scope %d\n", 
                                 offset, paramName, getCurrentScope());
                     } else {
-                        fprintf(output, "    lw $t0, %d($sp)\n", 100 + 4 + (paramNum * 4));
+                        fprintf(output, "    lw $t0, %d($sp)\n", 300 + 4 + (paramNum * 4));
                         fprintf(output, "    sw $t0, %d($sp)  # Store param %s (int) at scope %d\n", 
                                 offset, paramName, getCurrentScope());
                     }
@@ -696,14 +717,14 @@ void genStmt(ASTNode* node) {
                     tempReg = 0;
                     genExpr(arg->data.arg_list.expr);
                     int resultReg = tempReg > 0 ? tempReg - 1 : 0;
-                    fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, 4 + (argNum * 4));
+                    fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, 204 + (argNum * 4));
                     argNum++;
                     arg = arg->data.arg_list.next;
                 } else {
                     tempReg = 0;
                     genExpr(arg);
                     int resultReg = tempReg > 0 ? tempReg - 1 : 0;
-                    fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, 4 + (argNum * 4));
+                    fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, 204 + (argNum * 4));
                     break;
                 }
             }
@@ -720,63 +741,44 @@ void genStmt(ASTNode* node) {
             tempReg = 0;
             genExpr(node->data.switch_stmt.expr);
             int switchReg = tempReg > 0 ? tempReg - 1 : 0;
-            char* endLabel = newLabel();
+            static int switchCount = 0;
+            int currentSwitch = switchCount++;
+            char endLabel[32];
+            sprintf(endLabel, "end_switch_%d", currentSwitch);
 
-            ASTNode* caseNode = node->data.switch_stmt.cases;
-            char* defaultLabel = NULL;
+            /* Flatten the nested case list structure */
+            ASTNode* cases[100];
+            int caseCount = 0;
+            int hasDefault = 0;
+            collectSwitchCases(node->data.switch_stmt.cases, cases, &caseCount, &hasDefault, 100);
 
-            fprintf(output, "    # DEBUG: caseNode = %p, type = %d\n", (void*)caseNode, caseNode ? caseNode->type : -1);
-
-            /* First pass: generate all comparisons for non-default cases */
-            ASTNode* currentNode = caseNode;
-            while(currentNode) {
-                if(currentNode->type == NODE_CASE_LIST) {
-                    /* Extract the case_item from the case_list */
-                    ASTNode* caseItem = currentNode->data.case_list.case_item;
-                    if(caseItem && caseItem->type == NODE_CASE) {
-                        int caseValue = caseItem->data.case_stmt.value;
-                        fprintf(output, "    li $t7, %d\n", caseValue);
-                        fprintf(output, "    beq $t%d, $t7, case_%d\n", switchReg, caseValue);
-                    } else if(caseItem && caseItem->type == NODE_DEFAULT_CASE) {
-                        defaultLabel = newLabel();
-                    }
-                    /* Move to next case_list node */
-                    currentNode = currentNode->data.case_list.next;
-                } else if(currentNode->type == NODE_BREAK) {
-                    /* Skip BREAK nodes - they're handled as part of the case */
-                    currentNode = currentNode->right;  /* Try to get next sibling */
-                } else {
-                    currentNode = NULL;
+            /* First pass: generate all comparisons for cases */
+            for(int i = 0; i < caseCount; i++) {
+                if(cases[i]->type == NODE_CASE) {
+                    int caseValue = cases[i]->data.case_stmt.value;
+                    fprintf(output, "    li $t7, %d\n", caseValue);
+                    fprintf(output, "    beq $t%d, $t7, case_%d_%d\n", switchReg, currentSwitch, caseValue);
                 }
             }
 
-            /* Jump to default if no case matched */
-            if(defaultLabel) {
-                fprintf(output, "    j %s\n", defaultLabel);
+            /* Jump to default or end if no case matched */
+            if(hasDefault) {
+                fprintf(output, "    j default_%d\n", currentSwitch);
             } else {
                 fprintf(output, "    j %s\n", endLabel);
             }
 
             /* Second pass: generate case labels and code */
-            currentNode = caseNode;
-            while(currentNode) {
-                if(currentNode->type == NODE_CASE_LIST) {
-                    ASTNode* caseItem = currentNode->data.case_list.case_item;
-                    if(caseItem && caseItem->type == NODE_CASE) {
-                        int caseValue = caseItem->data.case_stmt.value;
-                        fprintf(output, "case_%d:\n", caseValue);
-                        genStmt(caseItem->data.case_stmt.stmts);
-                        fprintf(output, "    j %s\n", endLabel);
-                    } else if(caseItem && caseItem->type == NODE_DEFAULT_CASE) {
-                        if(defaultLabel) {
-                            fprintf(output, "%s:\n", defaultLabel);
-                            genStmt(caseItem->data.default_case.stmts);
-                            fprintf(output, "    j %s\n", endLabel);
-                        }
-                    }
-                    currentNode = currentNode->data.case_list.next;
-                } else {
-                    currentNode = NULL;
+            for(int i = 0; i < caseCount; i++) {
+                if(cases[i]->type == NODE_CASE) {
+                    int caseValue = cases[i]->data.case_stmt.value;
+                    fprintf(output, "case_%d_%d:\n", currentSwitch, caseValue);
+                    genStmt(cases[i]->data.case_stmt.stmts);
+                    fprintf(output, "    j %s\n", endLabel);
+                } else if(cases[i]->type == NODE_DEFAULT_CASE) {
+                    fprintf(output, "default_%d:\n", currentSwitch);
+                    genStmt(cases[i]->data.default_case.stmts);
+                    fprintf(output, "    j %s\n", endLabel);
                 }
             }
 
