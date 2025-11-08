@@ -77,6 +77,7 @@ extern FunctionTable funcTable;
 void initFuncTable();
 int addFunction(char* name, char* returnType); /*Add function to table*/
 int isFunctionDeclared(char* name); /*Check if function is declared*/
+int isBoolType(char* type); /*Check if type is bool*/
 void addFunctionParameter(char* funcName, char* paramName, char* paramType); /*Add parameter to function*/
 int getFunctionParamCount(char* name); /*Get number of parameters*/
 char* getFunctionReturnType(char* name); /*Get return type of function*/

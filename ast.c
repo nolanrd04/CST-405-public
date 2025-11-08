@@ -28,6 +28,23 @@ ASTNode* createVar(char* name) {
     return node;
 }
 
+/* Create a boolean literal node */
+ASTNode* createBool(int value) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_BOOL;
+    node->data.boolVal.bool_value = (value != 0) ? 1 : 0;  /* Store as 1 (true) or 0 (false) */
+    return node;
+}
+
+/* Create a unary operation node */
+ASTNode* createUnaryOp(BinOpType op, ASTNode* operand) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_UNARYOP;
+    node->data.unaryop.op = op;
+    node->data.unaryop.operand = operand;
+    return node;
+}
+
 /* Create a binary operation node */
 ASTNode* createBinOp(BinOpType op, ASTNode* left, ASTNode* right) {
     ASTNode* node = malloc(sizeof(ASTNode));
@@ -284,8 +301,15 @@ void printAST(ASTNode* node, int level) {
                 printf("NUM (int): %d\n", node->data.num.value.ival);
             }
             break;
+        case NODE_BOOL:
+            printf("BOOL: %s\n", node->data.boolVal.bool_value ? "true" : "false");
+            break;
         case NODE_VAR:
             printf("VAR: %s\n", node->data.name);
+            break;
+        case NODE_UNARYOP:
+            printf("UNARYOP: %c\n", node->data.unaryop.op == OP_NOT ? '!' : '?');
+            printAST(node->data.unaryop.operand, level + 1);
             break;
         case NODE_BINOP:
             printf("BINOP: %c\n", node->data.binop.op);

@@ -39,6 +39,35 @@ int isExprFloat(ASTNode* node) {
     }
 }
 
+// Helper function to check if expression is boolean
+int isExprBool(ASTNode* node) {
+    if (!node) return 0;
+
+    switch(node->type) {
+        case NODE_BOOL:
+            return 1;
+        case NODE_VAR: {
+            char* type = getVarType(node->data.name);
+            return isBoolType(type);
+        }
+        case NODE_BINOP: {
+            /* Logical and comparison operators produce boolean results */
+            return (node->data.binop.op == OP_AND || 
+                    node->data.binop.op == OP_OR ||
+                    node->data.binop.op == OP_EQ ||
+                    node->data.binop.op == OP_NEQ ||
+                    node->data.binop.op == OP_LT ||
+                    node->data.binop.op == OP_GT ||
+                    node->data.binop.op == OP_LTE ||
+                    node->data.binop.op == OP_GTE);
+        }
+        case NODE_UNARYOP:
+            return (node->data.unaryop.op == OP_NOT);
+        default:
+            return 0;
+    }
+}
+
 // Helper function to flatten case list structure
 void collectSwitchCases(ASTNode* node, ASTNode** cases, int* caseCount, int* hasDefault, int maxCases) {
     if (!node || *caseCount >= maxCases) return;
@@ -79,7 +108,13 @@ void genExpr(ASTNode* node) {
                 tempReg++;
             }
             break;
-            
+
+        case NODE_BOOL: {
+            fprintf(output, "    li $t%d, %d\n", tempReg, node->data.boolVal.bool_value);
+            tempReg++;
+            break;
+        }
+
         case NODE_VAR: {
             int offset = getVarOffset(node->data.name);
             if (offset == -1) {
@@ -92,6 +127,19 @@ void genExpr(ASTNode* node) {
                 tempReg = 0;
             } else {
                 fprintf(output, "    lw $t%d, %d($sp)\n", getNextTemp(), offset);
+            }
+            break;
+        }
+            
+        case NODE_UNARYOP: {
+            if (node->data.unaryop.op == OP_NOT) {
+                genExpr(node->data.unaryop.operand);
+                int operandReg = tempReg - 1;
+                if (operandReg < 0) operandReg = 0;
+                fprintf(output, "    # Logical NOT\n");
+                fprintf(output, "    seq $t%d, $t%d, $zero  # NOT operation\n", 
+                        operandReg, operandReg);
+                tempReg = operandReg + 1;
             }
             break;
         }
@@ -175,6 +223,10 @@ void genExpr(ASTNode* node) {
                     fprintf(output, "    seq $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
                 } else if (node->data.binop.op == OP_NEQ) {
                     fprintf(output, "    sne $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                } else if (node->data.binop.op == OP_AND) {
+                    fprintf(output, "    and $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                } else if (node->data.binop.op == OP_OR) {
+                    fprintf(output, "    or $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
                 } else {
                     fprintf(stderr, "Error: unsupported binary op for int\n");
                     exit(1);
@@ -401,13 +453,39 @@ void genStmt(ASTNode* node) {
             tempReg = 0;
             genExpr(node->data.expr);
 
-            // ✅ Use the helper function to determine if expression is float
+            // Use the helper function to determine if expression is float or boolean
             int isFloat = isExprFloat(node->data.expr);
+            int isBool = isExprBool(node->data.expr);
+
             if (isFloat) {
                 fprintf(output, "    # Print float\n");
                 fprintf(output, "    mov.s $f12, $f0\n");
                 fprintf(output, "    li $v0, 2\n");
                 fprintf(output, "    syscall\n");
+            } else if (isBool) {
+            /* Print "true" or "false" for booleans instead of 1 or 0*/
+            int printReg = tempReg > 0 ? tempReg - 1 : 0;
+            fprintf(output, "    # Print boolean\n");
+            
+            static int boolPrintCount = 0;
+            int currentPrint = boolPrintCount++;
+            
+            fprintf(output, "    beqz $t%d, print_false_%d\n", 
+                    printReg, currentPrint);
+            
+            /* Print "true" */
+            fprintf(output, "    la $a0, true_str\n");
+            fprintf(output, "    li $v0, 4\n");
+            fprintf(output, "    syscall\n");
+            fprintf(output, "    j print_bool_end_%d\n", currentPrint);
+            
+            /* Print "false" */
+            fprintf(output, "print_false_%d:\n", currentPrint);
+            fprintf(output, "    la $a0, false_str\n");
+            fprintf(output, "    li $v0, 4\n");
+            fprintf(output, "    syscall\n");
+            
+            fprintf(output, "print_bool_end_%d:\n", currentPrint);
             } else {
                 int printReg = tempReg > 0 ? tempReg - 1 : 0;
                 fprintf(output, "    # Print integer\n");
@@ -837,8 +915,10 @@ void generateMIPS(ASTNode* root, const char* filename) {
 
     initSymTab();
 
-    fprintf(output, ".data\n\n");
-    fprintf(output, ".text\n");
+    fprintf(output, ".data\n");
+    fprintf(output, "true_str: .asciiz \"true\"\n");
+    fprintf(output, "false_str: .asciiz \"false\"\n");
+    fprintf(output, "\n.text\n");
 
     // Collect all global function names
     char* funcNames[100];

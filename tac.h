@@ -19,6 +19,11 @@ typedef enum {
     TAC_PRINT,         /* Print: print(arg1) */
     TAC_DECL,          /* Declaration: declare result */
 
+    /* Logical Operations */
+    TAC_AND,           /* Logical AND: result = arg1 && arg2 */
+    TAC_OR,            /* Logical OR: result = arg1 || arg2 */
+    TAC_NOT,           /* Logical NOT: result = !arg1 */
+    
     /* Comparison operations */
     TAC_EQ,            /* == */
     TAC_NEQ,           /* != */

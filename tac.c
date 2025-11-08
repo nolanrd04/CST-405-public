@@ -173,6 +173,23 @@ char* generateTACExpr(ASTNode* node) {
             return temp;
         }
 
+        case NODE_BOOL: {
+            char* temp = malloc(20);
+            sprintf(temp, "%d", node->data.boolVal.bool_value);
+            return temp;
+        }
+        
+        case NODE_UNARYOP: {
+            char* operand = generateTACExpr(node->data.unaryop.operand);
+            char* temp = newTemp();
+            
+            if (node->data.unaryop.op == OP_NOT) {
+                appendTAC(createTAC(TAC_NOT, operand, NULL, temp));
+            }
+            
+            return temp;
+        }
+
         case NODE_ARRAY_ACCESS:
         {
             char* indexExpr = generateTACExpr(node->data.array_access.index);
@@ -516,7 +533,17 @@ void printTAC() {
                 printf("PRINT %s", curr->arg1);
                 printf("          // Output value of %s\n", curr->arg1);
                 break;
-            default:
+            case TAC_AND:
+                printf("%s = %s && %s", curr->result, curr->arg1, curr->arg2);
+                printf(" // Logical AND\n");
+                break;
+            case TAC_OR:
+                printf("%s = %s || %s", curr->result, curr->arg1, curr->arg2);
+                printf(" // Logical OR\n");
+                break;
+            case TAC_NOT:
+                printf("%s = !%s", curr->result, curr->arg1);
+                printf(" // Logical NOT\n");
                 break;
             case TAC_ARRAY_DECL:
                 printf("ARRAY_DECL %s", curr->result);
@@ -564,6 +591,8 @@ void printTAC() {
                 break;
             case TAC_DEFAULT:
                 printf("DEFAULT:");
+                break;
+            default:
                 break;
         }   
         curr = curr->next;
@@ -754,6 +783,67 @@ void optimizeTAC() {
                 break;
             }
 
+            case TAC_AND: {
+                char* left = propagateValue(curr->arg1);
+                char* right = propagateValue(curr->arg2);
+                
+                /* Constant folding for boolean AND */
+                if (isdigit(left[0]) && isdigit(right[0])) {
+                    int result = (atoi(left) != 0) && (atoi(right) != 0);
+                    char* resultStr = malloc(20);
+                    sprintf(resultStr, "%d", result);
+                    
+                    values[valueCount].var = strdup(curr->result);
+                    values[valueCount].value = resultStr;
+                    valueCount++;
+                    
+                    newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
+                } else {
+                    newInstr = createTAC(TAC_AND, left, right, curr->result);
+                }
+                break;
+            }
+            
+            case TAC_OR: {
+                char* left = propagateValue(curr->arg1);
+                char* right = propagateValue(curr->arg2);
+                
+                /* Constant folding for boolean OR */
+                if (isdigit(left[0]) && isdigit(right[0])) {
+                    int result = (atoi(left) != 0) || (atoi(right) != 0);
+                    char* resultStr = malloc(20);
+                    sprintf(resultStr, "%d", result);
+                    
+                    values[valueCount].var = strdup(curr->result);
+                    values[valueCount].value = resultStr;
+                    valueCount++;
+                    
+                    newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
+                } else {
+                    newInstr = createTAC(TAC_OR, left, right, curr->result);
+                }
+                break;
+            }
+            
+            case TAC_NOT: {
+                char* operand = propagateValue(curr->arg1);
+                
+                /* Constant folding for NOT */
+                if (isdigit(operand[0])) {
+                    int result = !(atoi(operand));
+                    char* resultStr = malloc(20);
+                    sprintf(resultStr, "%d", result);
+                    
+                    values[valueCount].var = strdup(curr->result);
+                    values[valueCount].value = resultStr;
+                    valueCount++;
+                    
+                    newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
+                } else {
+                    newInstr = createTAC(TAC_NOT, operand, NULL, curr->result);
+                }
+                break;
+            }
             
             case TAC_PRINT: // DONE
             {

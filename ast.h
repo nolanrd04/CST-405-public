@@ -10,6 +10,8 @@
 /* NODE TYPES - Different kinds of AST nodes in our language */
 typedef enum {
     NODE_NUM,       /* Numeric literal (e.g., 42) */
+    NODE_BOOL,      /* Boolean literal (e.g., true/false) */
+    NODE_UNARYOP,    /* Unary operation (e.g., !x) */
     NODE_VAR,       /* Variable reference (e.g., x) */
     NODE_BINOP,     /* Binary operation (e.g., x + y) */
     NODE_DECL,      /* Variable declaration (e.g., int x) */
@@ -56,7 +58,10 @@ typedef enum {
     OP_LT,     // <
     OP_GT,     // >
     OP_LTE,    // <=
-    OP_GTE     // >=
+    OP_GTE,    // >=
+    OP_AND,    // &&
+    OP_OR,     // ||
+    OP_NOT     // !
 } BinOpType;
 
 /* AST NODE STRUCTURE
@@ -74,8 +79,13 @@ typedef struct ASTNode {
             union {
                 int ival;      /* Integer value */
                 double fval;   /* Floating-point value */
+                int bval;      /* Boolean value */
             } value;
         } num;
+
+        struct {
+            int bool_value; /* 1 for true, 0 for false */
+        } boolVal;
         
         /* Variable reference (NODE_VAR) */
         char* name;
@@ -92,6 +102,11 @@ typedef struct ASTNode {
             struct ASTNode* left;       /* Left operand */
             struct ASTNode* right;      /* Right operand */
         } binop;
+
+        struct{
+            BinOpType op;               /* Operator type */
+            struct ASTNode* operand;    /* Operand */
+        } unaryop;
         
         /* Assignment structure (NODE_ASSIGN) */
         struct {
@@ -243,8 +258,12 @@ typedef struct ASTNode {
  * These functions are called by the parser to build the tree
  */
 ASTNode* createNum(double value, int isFloat);                                   /* Create number node */
-ASTNode* createVar(char* name);                                  /* Create variable node */
+ASTNode* createVar(char* name);     /* Create variable node */
+ASTNode* createBool(int value);                            /* Create boolean node */
+
+ASTNode* createUnaryOp(BinOpType op, ASTNode* operand); /* Create unary op node */
 ASTNode* createBinOp(BinOpType op, ASTNode* left, ASTNode* right);   /* Create binary op node */
+
 ASTNode* createDecl(char* varType, char* name);                                 /* Create declaration node */
 ASTNode* createAssign(char* var, ASTNode* value);               /* Create assignment node */
 ASTNode* createPrint(ASTNode* expr);                            /* Create print node */

@@ -146,6 +146,10 @@ int addArrayVar(char* name, int size, char* type) {
     return symtab.vars[symtab.count - 1].offset;
 }
 
+int isBoolType(char* type){
+    return (type && strcmp(type, "bool") == 0);
+}
+
 int isArrayVar(char* name) {
     for (int i = 0; i < symtab.count; i++) {
         if (strcmp(symtab.vars[i].name, name) == 0) {

@@ -19,96 +19,229 @@ void yyerror(const char* s);  /* Error handling function */
 ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 %}
 
-/* SEMANTIC VALUES UNION
- * Defines possible types for tokens and grammar symbols
- * This allows different grammar rules to return different data types
- */
+/* ============================================================================
+   SEMANTIC VALUES UNION
+   Defines possible types for tokens and grammar symbols
+   ============================================================================ */
 %union {
     int num;                /* For integer literals */
-    float fnum;         /* For float literals */
+    float fnum;             /* For float literals */
     char* str;              /* For identifiers */
     struct ASTNode* node;   /* For AST nodes */
 }
 
-/* TOKEN DECLARATIONS with their semantic value types */
-%token <num> NUM        /* Number token carries an integer value */
-%token <fnum> FNUM      /* Float number token carries a float value */
-%token <str> ID         /* Identifier token carries a string */
-%token INT PRINT FLOAT        /* Keywords have no semantic value */
-%token RETURN           /* Added RETURN token */
-%token VOID             /* Added VOID token for functions with no return*/
-%token IF ELSE          /* Added IF and ELSE tokens for conditional statements */
+/* ============================================================================
+   TOKEN DECLARATIONS with their semantic value types
+   ============================================================================ */
+
+/* Literals */
+%token <num> NUM            /* Integer literal */
+%token <fnum> FNUM          /* Float literal */
+%token <num> TRUE FALSE     /* Boolean literals */
+
+/* Identifiers */
+%token <str> ID             /* Identifier/variable name */
+
+/* Data Types */
+%token INT FLOAT VOID BOOL
+
+/* Keywords & Control Flow */
+%token IF ELSE              /* Conditional statements */
+%token SWITCH CASE DEFAULT BREAK  /* Switch statements */
+%token RETURN               /* Function return */
+
+/* I/O */
+%token PRINT                /* Print statement */
+
+/* Operators */
 %token EQ NEQ LT GT LTE GTE   /* Comparison operators */
-%token SWITCH CASE DEFAULT BREAK /* For future
+%token AND OR NOT            /* Logical operators */
 
+/* ============================================================================
+   NON-TERMINAL TYPES - Define return types for grammar rules
+   ============================================================================ */
+%type <node> program stmt_list
+%type <node> stmt decl declAssign assign
+%type <node> if_stmt switch_stmt case_list case_Stmt
+%type <node> func_decl param_list param block
+%type <node> print_stmt return_stmt func_call arg_list
+%type <node> expr arrayExpr
 
-/* NON-TERMINAL TYPES - Define what type each grammar rule returns */
-%type <node> program stmt_list stmt decl assign declAssign expr print_stmt arrayExpr if_stmt
-%type <node> func_decl param_list param block return_stmt func_call arg_list
-%type <node> switch_stmt case_list case_Stmt
-
-/* OPERATOR PRECEDENCE AND ASSOCIATIVITY */
-%left '+'  /* Addition is left-associative: a+b+c = (a+b)+c */
-%left '-' /* Subtraction is left-associative: a-b-c = (a-b)-c */
-%left '*'
-%left '/'  /* Division is left-associative: a/b/c = (a/b)/c */
-%left EQ NEQ LT GT LTE GTE /* Comparison operators precedence */
+/* ============================================================================
+   OPERATOR PRECEDENCE AND ASSOCIATIVITY (lowest to highest)
+   ============================================================================ */
+%left OR                    /* Logical OR - lowest precedence */
+%left AND                   /* Logical AND */
+%left EQ NEQ                /* Equality operators */
+%left LT GT LTE GTE         /* Comparison operators */
+%left '+' '-'               /* Addition, Subtraction */
+%left '*' '/'               /* Multiplication, Division */
+%right NOT                  /* Logical NOT - highest precedence */
 
 %%
 
-/* GRAMMAR RULES - Define the structure of our language */
+/* ============================================================================
+   PROGRAM STRUCTURE
+   ============================================================================ */
 
-/* PROGRAM RULE - Entry point of our grammar */
 program:
     stmt_list { 
-        /* Action: Save the statement list as our AST root */
-        root = $1;  /* $1 refers to the first symbol (stmt_list) */
+        root = $1;
     }
     ;
 
-/* STATEMENT LIST - Handles multiple statements */
+/* ============================================================================
+   STATEMENT LISTS (top-level and nested)
+   ============================================================================ */
+
 stmt_list:
     stmt { 
-        /* Base case: single statement */
-        $$ = $1;  /* Pass the statement up as-is */
+        $$ = $1;
     }
-    |
-    func_decl { 
-        /* Base case: single function declaration */
-        $$ = $1;  /* Pass the function declaration up as-is */
+    | func_decl { 
+        $$ = $1;
     }
     | stmt_list stmt { 
-        /* Recursive case: list followed by another statement */
-        $$ = createStmtList($1, $2);  /* Build linked list of statements */
+        $$ = createStmtList($1, $2);
     }
-    |
-    stmt_list func_decl {
-        $$ = createStmtList($1, $2); /* Append function declaration to statement list */
+    | stmt_list func_decl {
+        $$ = createStmtList($1, $2);
     }
     ;
 
-/* STATEMENT TYPES - The three kinds of statements we support */
+/* ============================================================================
+   STATEMENTS (all types grouped by purpose)
+   ============================================================================ */
+
 stmt:
-    decl        /* Variable declaration */
-    | assign    /* Assignment statement */
-    | declAssign /* Declaration with assignment */
-    | print_stmt /* Print statement */
-    | return_stmt /* Return statement */
-    | block      /* Block of statements */
-    | func_call ';' /* Function call statement */
-    | if_stmt /* If statement */
-    | switch_stmt /* Switch statement */
-    | BREAK ';'  { $$ = createBreak(); } /* Break statement */
+    /* Variable management */
+    decl
+    | declAssign
+    | assign
+    
+    /* I/O */
+    | print_stmt
+    
+    /* Control flow */
+    | if_stmt
+    | switch_stmt
+    | return_stmt
+    | func_call ';'
+    | BREAK ';' { $$ = createBreak(); }
+    
+    /* Grouping */
+    | block
     ;
 
-/* (NEW) ##FUNCTION DECLARATION## */
+/* ============================================================================
+   VARIABLE DECLARATIONS
+   ============================================================================ */
+
+decl:
+    INT ID ';' { 
+        $$ = createDecl("int", $2);
+        free($2);
+    }
+    | FLOAT ID ';' {
+        $$ = createDecl("float", $2);
+        free($2);
+    }
+    | BOOL ID ';' {
+        $$ = createDecl("bool", $2);
+        free($2);
+    }
+    /* 1D integer arrays */
+    | INT ID '[' NUM ']' ';' {
+        $$ = createArrayDeclOfLength("int", $2, $4);
+        addArrayVar($2, $4, "int");
+        free($2);
+    }
+    /* 2D integer arrays */
+    | INT ID '[' NUM ']' '[' NUM ']' ';' {
+        addArray2DVar($2, $4, $7, "int");
+        $$ = create2DArrayDeclOfLength("int", $2, $4, $7);
+        free($2);
+    }
+    /* 1D float arrays */
+    | FLOAT ID '[' NUM ']' ';' {
+        $$ = createArrayDeclOfLength("float", $2, $4);
+        addArrayVar($2, $4, "float");
+        free($2);
+    }
+    /* 2D float arrays */
+    | FLOAT ID '[' NUM ']' '[' NUM ']' ';' {
+        addArray2DVar($2, $4, $7, "float");
+        $$ = create2DArrayDeclOfLength("float", $2, $4, $7);
+        free($2);
+    }
+    ;
+
+/* Declaration with initialization */
+declAssign:
+    INT ID '=' expr ';' {
+        $$ = createDeclAssign("int", $2, $4);
+        free($2);
+    }
+    | FLOAT ID '=' expr ';' { 
+        $$ = createDeclAssign("float", $2, $4);
+        free($2);
+    }
+    | BOOL ID '=' expr ';' {
+        $$ = createDeclAssign("bool", $2, $4);
+        free($2);
+    }
+    /* 1D array initialization with explicit size */
+    | INT ID '[' NUM ']' '=' '{' arrayExpr '}' ';' {
+        $$ = createArrayAssign("int", $2, $4, $8);
+        free($2);
+    }
+    /* 1D array initialization with inferred size */
+    | INT ID '[' ']' '=' '{' arrayExpr '}' ';' {
+        $$ = createArrayDeclAssign("int", $2, 0, $7);
+        free($2);
+    }
+    /* 1D float array initialization with explicit size */
+    | FLOAT ID '[' NUM ']' '=' '{' arrayExpr '}' ';' {
+        $$ = createArrayAssign("float", $2, $4, $8);
+        free($2);
+    }
+    /* 1D float array initialization with inferred size */
+    | FLOAT ID '[' ']' '=' '{' arrayExpr '}' ';' {
+        $$ = createArrayDeclAssign("float", $2, 0, $7);
+        free($2);
+    }
+    ;
+
+/* Assignment statements */
+assign:
+    /* Simple variable assignment */
+    ID '=' expr ';' { 
+        $$ = createAssign($1, $3);
+        free($1);
+    }
+    /* 1D array element assignment */
+    | ID '[' expr ']' '=' expr ';' {
+        $$ = createArrayElemAssign($1, $3, $6);
+        free($1);
+    }
+    /* 2D array element assignment */
+    | ID '[' expr ']' '[' expr ']' '=' expr ';' {
+        $$ = createArray2DElemAssign($1, $3, $6, $9);
+        free($1);
+    }
+    ;
+
+/* ============================================================================
+   FUNCTION DECLARATIONS AND CALLS
+   ============================================================================ */
+
 func_decl:
     INT ID '(' param_list ')' block {
-        $$ = createFuncDecl("int", $2, $4, $6); /* Create function declaration node */
-        free($2); /* Free the function name string */
+        $$ = createFuncDecl("int", $2, $4, $6);
+        free($2);
     }
     | INT ID '(' ')' block {
-        $$ = createFuncDecl("int", $2, NULL, $5); /* Function with no parameters */
+        $$ = createFuncDecl("int", $2, NULL, $5);
         free($2);
     }
     | FLOAT ID '(' param_list ')' block {
@@ -120,330 +253,242 @@ func_decl:
         free($2);
     }
     | VOID ID '(' ')' block {
-        $$ = createFuncDecl("void", $2, NULL, $5); /* Void function with no parameters */
+        $$ = createFuncDecl("void", $2, NULL, $5);
         free($2);
     }
     ;
-/* (NEW) ##PARAMETER LIST## */
+
 param_list:
     param {
-        $$ = $1; /* Single parameter */
+        $$ = $1;
     }
     | param_list ',' param {
-        $$ = createParamList($1, $3); /* Append parameter to list */
+        $$ = createParamList($1, $3);
     }
     ;
-/* (NEW) ## SINGLE PARAMETER## */
+
 param:
     INT ID {
-        $$ = createParam("int", $2); /* Create parameter node */
+        $$ = createParam("int", $2);
         free($2);
     }
-    | FLOAT ID {  /* ✅ ADD THIS */
+    | FLOAT ID {
         $$ = createParam("float", $2);
         free($2);
     }
     ;
-/* (NEW) ##BLOCK OF STATEMENTS## */
-block:
-    '{' stmt_list '}' {
-        $$ = createBlock($2); /* Create block node with statement list */
-    }
-    | '{' '}' {
-        $$ = createBlock(NULL); /* Empty block */
-    }
-    ;
-/* (NEW) ##RETURN STATEMENT## */
-return_stmt:
-    RETURN expr ';' {
-        $$ = createReturn($2); /* Create return statement node */
-    }
-    | RETURN ';' {
-        $$ = createReturn(NULL); /* Return with no value */
-    }
-    ;
-/* (NEW) ##FUNCTION CALL## */
+
 func_call:
     ID '(' arg_list ')' {
-        $$ = createFuncCall($1, $3); /* Create function call node */
-        free($1); /* Free function name string */
+        $$ = createFuncCall($1, $3);
+        free($1);
     }
     | ID '(' ')' {
-        $$ = createFuncCall($1, NULL); /* Function call with no arguments */
+        $$ = createFuncCall($1, NULL);
         free($1);
     }
     ;
-/* (NEW ) ##IF STATEMENT## */
-if_stmt:
-    IF '(' expr ')' stmt
-        { $$ = createIfNode($3, $5, NULL); /* Create if-else statement node */
-    }
-    | IF '(' expr ')' stmt ELSE stmt
-        { $$ = createIfNode($3, $5, $7); /* Create if statement node */
-    }
-    ;
 
-/* SWITCH STATEMENT */
-switch_stmt:
-    SWITCH '(' expr ')' '{' case_list '}' {
-        $$ = createSwitch($3, $6); /* Create switch statement node */
-    }
-    ;
-case_list:
-    case_Stmt {
-        $$ = $1; /* Single case statement */
-    }
-    | case_list case_Stmt {
-        $$ = createCaseList($1, $2); /* Append case statement to list */
-    }
-    ;
-case_Stmt:
-    CASE NUM ':' stmt_list {
-        $$ = createCase($2, $4); /* Create case node */
-    }
-    | DEFAULT ':' stmt_list {
-        $$ = createDefaultCase($3); /* Create default case node */
-    }
-    ;
-/* (NEW) ##ARGUMENT LIST## */
 arg_list:
     expr {
-        $$ = createArgList($1, NULL); /* Single argument */
+        $$ = createArgList($1, NULL);
     }
     | arg_list ',' expr {
-        $$ = createArgList($3, $1); /* Append argument to list */
-    }
-    ;
-/* DECLARATION RULE - "int x;" or "int x = expr;*/
-decl:
-    INT ID ';' { 
-
-        /* Create declaration node and free the identifier string */
-        $$ = createDecl("int", $2);  /* $2 is the ID token's string value; stored in the symbol table; returns into $$, which is a pointer to a sub tree. */
-        free($2);             /* Free the string copy from scanner */
-    }
-    /* Add float support */
-    | FLOAT ID ';' {
-        $$ = createDecl("float", $2);
-        free($2);
-    }
-
-    /* ##### ONE DIMENSIONAL ARRAYS ##### */
-    /* array element of length NUM */
-    | INT ID '[' NUM ']' ';'
-    {
-        $$ = createArrayDeclOfLength("int", $2, $4);/* done */
-        addArrayVar($2, $4, "int");
-        free($2);
-    }
-
-    /* ##### TWO DIMENSIONAL ARRAYS ##### */
-    /* 2D array element of length NUM x NUM */
-    | INT ID '[' NUM ']' '[' NUM ']' ';'
-    {
-        addArray2DVar($2, $4, $7, "int");
-        $$ = create2DArrayDeclOfLength("int", $2, $4, $7); /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
-        free($2);
-    }
-    |
-    FLOAT ID '[' NUM ']' ';'
-    {
-        $$ = createArrayDeclOfLength("float", $2, $4);/* done */
-        addArrayVar($2, $4, "float");
-        free($2);
-    }
-    |
-    FLOAT ID '[' NUM ']' '[' NUM ']' ';'
-    {
-        addArray2DVar($2, $4, $7, "float");
-        $$ = create2DArrayDeclOfLength("float", $2, $4, $7); /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
-        free($2);
+        $$ = createArgList($3, $1);
     }
     ;
 
-/* ASSIGNMENT RULE - "x = expr;" */
-assign:
-    /* array element assignment: ID '[' expr ']' '=' expr ';' */
-    ID '[' expr ']' '=' expr ';' {
-        $$ = createArrayElemAssign($1, $3, $6); 
-        free($1);
+/* ============================================================================
+   CONTROL FLOW STATEMENTS
+   ============================================================================ */
+
+if_stmt:
+    IF '(' expr ')' stmt {
+        $$ = createIfNode($3, $5, NULL);
     }
-    /* plain variable assignment */
-    | ID '=' expr ';' { 
-        $$ = createAssign($1, $3);  
-        free($1);
-    }
-    /* assign a single element at a time */
-    | ID '[' expr ']' '[' expr ']' '=' expr ';'
-    {
-        $$ = createArray2DElemAssign($1, $3, $6, $9); /* scanner.l -> parser.y -> ast.h (done) -> ast.c (done)-> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
-        free($1);
+    | IF '(' expr ')' stmt ELSE stmt {
+        $$ = createIfNode($3, $5, $7);
     }
     ;
 
-declAssign:
-
-    /* ##### DONE ##### */
-    INT ID { 
-    } '=' expr ';'
-    {
-        $$ = createDeclAssign("int", $2, $5); /* done */
-        free($2);
-    }
-
-    |
-    FLOAT ID '=' expr';' { 
-
-        /* Create declaration node and free the identifier string */
-        $$ = createDeclAssign("float", $2, $4);  /* $2 is the ID token's string value; stored in the symbol table; returns into $$, which is a pointer to a sub tree. */
-        free($2);             /* Free the string copy from scanner */
-    }
-
-    /*array of length num with assignment */
-    | INT ID '[' NUM ']' '=' '{' arrayExpr '}' ';'
-    {
-        $$ = createArrayAssign("int", $2, $4, $8);/* done */
-        free($2);
-    }
-    /* array element of unknown length with assignment */
-    | INT ID '[' ']' '=' '{' arrayExpr '}' ';'
-    {
-        $$ = createArrayDeclAssign("int", $2, 0, $7);/* done */
-        free($2);
-    }
-    |
-    FLOAT ID '[' NUM ']' '=' '{' arrayExpr '}' ';'
-    {
-        $$ = createArrayAssign("float", $2, $4, $8);/* done */
-        free($2);
-    }
-    |
-    FLOAT ID '[' ']' '=' '{' arrayExpr '}' ';'
-    {
-        $$ = createArrayDeclAssign("float", $2, 0, $7);/* done */
-        free($2);
+switch_stmt:
+    SWITCH '(' expr ')' '{' case_list '}' {
+        $$ = createSwitch($3, $6);
     }
     ;
 
-/* EXPRESSION RULES - Build expression trees */
+case_list:
+    case_Stmt {
+        $$ = $1;
+    }
+    | case_list case_Stmt {
+        $$ = createCaseList($1, $2);
+    }
+    ;
+
+case_Stmt:
+    CASE NUM ':' stmt_list {
+        $$ = createCase($2, $4);
+    }
+    | DEFAULT ':' stmt_list {
+        $$ = createDefaultCase($3);
+    }
+    ;
+
+/* ============================================================================
+   FUNCTION RETURNS AND I/O
+   ============================================================================ */
+
+return_stmt:
+    RETURN expr ';' {
+        $$ = createReturn($2);
+    }
+    | RETURN ';' {
+        $$ = createReturn(NULL);
+    }
+    ;
+
+print_stmt:
+    PRINT '(' expr ')' ';' { 
+        $$ = createPrint($3);
+    }
+    ;
+
+/* ============================================================================
+   BLOCK STATEMENTS
+   ============================================================================ */
+
+block:
+    '{' stmt_list '}' {
+        $$ = createBlock($2);
+    }
+    | '{' '}' {
+        $$ = createBlock(NULL);
+    }
+    ;
+
+/* ============================================================================
+   EXPRESSIONS (organized by type)
+   ============================================================================ */
+
 expr:
-    '(' expr ')' { 
-        /* Parenthesized expression - just pass up the inner expression */
-        $$ = $2;  /* $2 is the expr inside the parentheses */
-    }
-    |
+    /* Literals */
     NUM { 
-        /* Literal number */
-        $$ = createNum($1, 0);  /* Create leaf node with number value */
+        $$ = createNum($1, 0);
     }
     | FNUM { 
-        /* Literal float number */
-        $$ = createNum($1, 1);  /* Create leaf node with float value */
+        $$ = createNum($1, 1);
     }
+    | TRUE {
+        $$ = createNum(1, 0);
+    }
+    | FALSE {
+        $$ = createNum(0, 0);
+    }
+    
+    /* Variables and array access */
     | ID { 
-        /* Variable reference */
-        $$ = createVar($1);  /* Create leaf node with variable name */
-        free($1);            /* Free the identifier string */
+        $$ = createVar($1);
+        free($1);
     }
-    | ID '[' expr ']' { /* allows to access whatever value is at index 'expr' */
+    | ID '[' expr ']' {
         $$ = createArrayAccess($1, $3);
         free($1);
     }
-    | ID '[' expr ']' '[' expr ']' /* allows to access whatever value is at index 'expr', 'expr' */
-    {
-        $$ = createArray2DAccess($1, $3, $6); /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c */
+    | ID '[' expr ']' '[' expr ']' {
+        $$ = createArray2DAccess($1, $3, $6);
         free($1);
     }
+    
+    /* Parenthesized expressions */
+    | '(' expr ')' { 
+        $$ = $2;
+    }
+    
+    /* Arithmetic operations */
     | expr '+' expr { 
-        /* Addition operation - builds binary tree */
-        $$ = createBinOp(OP_ADD, $1, $3);  /* Left child, op, right child */
+        $$ = createBinOp(OP_ADD, $1, $3);
     }
     | expr '-' expr { 
-        /* Subtraction operation - builds binary tree */
-        $$ = createBinOp(OP_SUB, $1, $3);  /* Left child, op, right child */
+        $$ = createBinOp(OP_SUB, $1, $3);
     }
     | expr '*' expr { 
-        /* Multiplication operation - builds binary tree */
-        $$ = createBinOp(OP_MUL, $1, $3);  /* Left child, op, right child */
+        $$ = createBinOp(OP_MUL, $1, $3);
     }
     | expr '/' expr { 
-        /* Division operation - builds binary tree */
-        $$ = createBinOp(OP_DIV, $1, $3);  /* Left child, op, right child */
+        $$ = createBinOp(OP_DIV, $1, $3);
     }
+    
+    /* Comparison operations */
     | expr EQ expr {
-        /* Equality comparison */
         $$ = createBinOp(OP_EQ, $1, $3);
     }
     | expr NEQ expr {
-        /* Not equal comparison */
         $$ = createBinOp(OP_NEQ, $1, $3);
     }
     | expr LT expr {
-        /* Less than comparison */
         $$ = createBinOp(OP_LT, $1, $3);
     }
     | expr GT expr {
-        /* Greater than comparison */
         $$ = createBinOp(OP_GT, $1, $3);
     }
     | expr LTE expr {
-        /* Less than or equal comparison */
         $$ = createBinOp(OP_LTE, $1, $3);
     }
     | expr GTE expr {
-        /* Greater than or equal comparison */
         $$ = createBinOp(OP_GTE, $1, $3);
     }
+    
+    /* Logical operations */
+    | expr AND expr {
+        $$ = createBinOp(OP_AND, $1, $3);
+    }
+    | expr OR expr {
+        $$ = createBinOp(OP_OR, $1, $3);
+    }
+    | NOT expr {
+        $$ = createUnaryOp(OP_NOT, $2);  /* Unary NOT: left=$2, right=NULL */
+    }
+    
+    /* Function calls */
     | func_call { 
-        /* ADDED */
-        /* Function call as an expression */
-        $$ = $1;  /* Just pass up the function call node */
+        $$ = $1;
     }
     ;
 
-/* PRINT STATEMENT - "print(expr);" */
-print_stmt:
-    PRINT '(' expr ')' ';' { 
-        /* Create print node with expression to print */
-        $$ = createPrint($3);  /* $3 is the expression inside parens */
-    }
-    ;
-
-/* array expression list */
+/* Array element expressions */
 arrayExpr:
     expr {
-        $$ = createExprList($1, NULL); /* done */
+        $$ = createExprList($1, NULL);
     }
     | arrayExpr ',' expr {
-        $$ = createExprList($3, $1); /* done */
+        $$ = createExprList($3, $1);
     }
     ;
-
-/* 2D array expression list 
-arrayExpr2D:
-    '{' arrayExpr '}' {
-        /* $$ = create2DExprList($2, NULL); */ /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c 
-    }
-    | arrayExpr2D ',' '{' arrayExpr '}' {
-        /* $$ = create2DExprList($4, $1); */ /* scanner.l -> parser.y -> ast.h -> ast.c -> symtab.h -> symtab.c -> codegen.c -> tac.h -> tac.c 
-    }
-    ;*/
 
 %%
 
-/* ERROR HANDLING - Called by Bison when syntax error detected */
+/* ============================================================================
+   ERROR HANDLING
+   ============================================================================ */
+
 void yyerror(const char* s) {
     fprintf(stderr, "Syntax Error: %s\n", s);
 }
 
-
-// Our compilers supports:
-// 1. Binary operations: +, -, *, /
-// 2. Stand alone int variable declarations
-// 3. int variable assignments
-// 4. Simultaneous int declaration and assignment
-// 5. stand alone 1d and 2d array variable declarations
-// 6. by-index element assignments for 1d and 2d arrays
-// 7. by-index element access for 1d and 2d arrays
-// 8. simultaneous declaring and assigning values to a 1d array.
-// 9. print statements for values
+/* ============================================================================
+   LANGUAGE FEATURES SUPPORTED
+   ============================================================================
+   1. Binary arithmetic: +, -, *, /
+   2. Integer and float variables
+   3. Variable declarations and assignments
+   4. 1D and 2D arrays (int and float)
+   5. Array element access and assignment
+   6. Function declarations with parameters and return values
+   7. Function calls with arguments
+   8. Conditional statements: if/else
+   9. Switch statements with cases and default
+   10. Logical operators: &&, ||, !
+   11. Comparison operators: ==, !=, <, >, <=, >=
+   12. Print statements for output
+   ============================================================================ */

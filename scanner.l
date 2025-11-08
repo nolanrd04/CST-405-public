@@ -7,6 +7,9 @@
 %option noinput
 %%
 "int"           { return INT; }
+"bool"          { return BOOL; }
+"true"          { yylval.num = 1; return TRUE; }
+"false"         { yylval.num = 0; return FALSE; }
 "float"         { return FLOAT; }
 "print"         { return PRINT; }
 "return"        { return RETURN;}
@@ -34,6 +37,9 @@
 "<="            { return LTE; }
 ">"             { return GT; }
 "<"             { return LT; }
+"&&"            { return AND; }
+"||"            { return OR; }
+"!"             { return NOT; }
 ";"             { return ';'; }
 "("             { return '('; }
 ")"             { return ')'; }
