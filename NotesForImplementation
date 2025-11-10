@@ -2,9 +2,6 @@ FOR IF-STATEMENTS
 1. The AST should generate the IR code.
 2. Labels for if-statements and else-statments should be handled in the AST node.
 3. Optimize code: use constant propagation to replace variables in if-statements with actual values; handle OR statments like if one side is true ignore the other side.
-4. Handle boolean variables.
-5. Handle keywords (true and false).
-6. Handle if comparators (and, or, !, <, >, <=, >=).
 
 FOR GENERAL IMPROVEMENTS
 1. Calculate efficiency of the compiler. (business practice).

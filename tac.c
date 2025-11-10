@@ -591,6 +591,77 @@ void printTAC() {
                 break;
             case TAC_DEFAULT:
                 printf("DEFAULT:");
+                printf("         // Switch default case\n");
+                break;
+            case TAC_FUNC_DECL:
+                printf("FUNC %s %s", curr->arg1, curr->result);
+                printf("     // Function declaration: %s returns %s\n", curr->result, curr->arg1);
+                break;
+            case TAC_FUNC_BEGIN:
+                printf("BEGIN_FUNC %s", curr->result);
+                printf("  // Begin function body\n");
+                break;
+            case TAC_FUNC_END:
+                printf("END_FUNC %s", curr->result);
+                printf("    // End function body\n");
+                break;
+            case TAC_PARAM:
+                printf("PARAM %s %s", curr->arg1, curr->result);
+                printf("   // Parameter: %s of type %s\n", curr->result, curr->arg1);
+                break;
+            case TAC_CALL:
+                if (curr->arg2) { // arg2 contains argument count
+                    printf("%s = CALL %s (%s)", curr->result, curr->arg1, curr->arg2);
+                    printf(" // Call function with %s arguments\n", curr->arg2);
+                } else {
+                    printf("%s = CALL %s", curr->result, curr->arg1);
+                    printf("     // Call function\n");
+                }
+                break;
+            case TAC_ARG:
+                printf("ARG %s", curr->arg1);
+                printf("          // Function call argument\n");
+                break;
+            case TAC_RETURN:
+                if (curr->arg1) {
+                    printf("RETURN %s", curr->arg1);
+                    printf("        // Return with value\n");
+                } else {
+                    printf("RETURN");
+                    printf("            // Return void\n");
+                }
+                break;
+            case TAC_NEQ:
+                printf("%s = %s != %s", curr->result, curr->arg1, curr->arg2);
+                printf(" // Not equal comparison\n");
+                break;
+            case TAC_LT:
+                printf("%s = %s < %s", curr->result, curr->arg1, curr->arg2);
+                printf("  // Less than comparison\n");
+                break;
+            case TAC_GT:
+                printf("%s = %s > %s", curr->result, curr->arg1, curr->arg2);
+                printf("  // Greater than comparison\n");
+                break;
+            case TAC_LTE:
+                printf("%s = %s <= %s", curr->result, curr->arg1, curr->arg2);
+                printf(" // Less than or equal comparison\n");
+                break;
+            case TAC_GTE:
+                printf("%s = %s >= %s", curr->result, curr->arg1, curr->arg2);
+                printf(" // Greater than or equal comparison\n");
+                break;
+            case TAC_IFZ:
+                printf("IFZ %s GOTO %s", curr->arg1, curr->result);
+                printf("   // If zero, jump to %s\n", curr->result);
+                break;
+            case TAC_ENTER_SCOPE:
+                printf("ENTER_SCOPE");
+                printf("        // Enter a new scope block\n");
+                break;
+            case TAC_EXIT_SCOPE:
+                printf("EXIT_SCOPE");
+                printf("         // Exit current scope block\n");
                 break;
             default:
                 break;
@@ -952,6 +1023,76 @@ void optimizeTAC() {
                 break;
             }
 
+            // Handle comparison operations with constant folding where possible
+            case TAC_EQ:
+            case TAC_NEQ:
+            case TAC_LT:
+            case TAC_GT:
+            case TAC_LTE:
+            case TAC_GTE:
+            {
+                char* left = propagateValue(curr->arg1);
+                char* right = propagateValue(curr->arg2);
+                
+                // Constant folding for comparison operators
+                if (isdigit(left[0]) && isdigit(right[0])) {
+                    int leftVal = atoi(left);
+                    int rightVal = atoi(right);
+                    int result;
+                    
+                    switch(curr->op) {
+                        case TAC_EQ:  result = (leftVal == rightVal); break;
+                        case TAC_NEQ: result = (leftVal != rightVal); break;
+                        case TAC_LT:  result = (leftVal < rightVal);  break;
+                        case TAC_GT:  result = (leftVal > rightVal);  break;
+                        case TAC_LTE: result = (leftVal <= rightVal); break;
+                        case TAC_GTE: result = (leftVal >= rightVal); break;
+                        default: result = 0; break;
+                    }
+                    
+                    char* resultStr = malloc(20);
+                    sprintf(resultStr, "%d", result);
+                    
+                    values[valueCount].var = strdup(curr->result);
+                    values[valueCount].value = resultStr;
+                    valueCount++;
+                    
+                    newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
+                } else {
+                    // Can't optimize, pass through original comparison
+                    newInstr = createTAC(curr->op, left, right, curr->result);
+                }
+                break;
+            }
+
+            // Handle function-related operations
+            case TAC_FUNC_DECL:
+            case TAC_FUNC_BEGIN:
+            case TAC_FUNC_END:
+            case TAC_PARAM:
+            case TAC_CALL:
+            case TAC_ARG:
+            case TAC_RETURN:
+                // Function operations generally can't be optimized away
+                newInstr = createTAC(curr->op, curr->arg1, curr->arg2, curr->result);
+                break;
+
+            // Control flow operations
+            case TAC_IFZ:
+                newInstr = createTAC(curr->op, curr->arg1, curr->arg2, curr->result);
+                break;
+            case TAC_GOTO:
+                newInstr = createTAC(curr->op, curr->arg1, curr->arg2, curr->result);
+                break;
+            case TAC_LABEL:
+                newInstr = createTAC(curr->op, curr->arg1, curr->arg2, curr->result);
+                break;
+
+            // Scope operations
+            case TAC_ENTER_SCOPE:
+            case TAC_EXIT_SCOPE:
+                newInstr = createTAC(curr->op, NULL, NULL, NULL);
+                break;
         }
         
         if (newInstr) {
@@ -1022,6 +1163,66 @@ void printOptimizedTAC() {
                 break;
             case TAC_ARRAY_2D_ACCESS:
                 printf("%s = %s[%s]\n", curr->result, curr->arg2, curr->arg1);
+                break;
+
+            case TAC_EQ:
+            case TAC_NEQ:
+            case TAC_LT:
+            case TAC_GT:
+            case TAC_LTE:
+            case TAC_GTE:
+                if (curr->arg1 && curr->arg2 && isdigit(curr->arg1[0]) && isdigit(curr->arg2[0])) {
+                    printf("%s = %s", curr->result, curr->arg1);
+                    printf("           // Optimized comparison to constant\n");
+                } else {
+                    const char* op;
+                    switch(curr->op) {
+                        case TAC_EQ:  op = "=="; break;
+                        case TAC_NEQ: op = "!="; break;
+                        case TAC_LT:  op = "<";  break;
+                        case TAC_GT:  op = ">";  break;
+                        case TAC_LTE: op = "<="; break;
+                        case TAC_GTE: op = ">="; break;
+                        default: op = "??"; break;
+                    }
+                    printf("%s = %s %s %s     // Runtime comparison needed\n", 
+                          curr->result, curr->arg1, op, curr->arg2);
+                }
+                break;
+
+            case TAC_FUNC_DECL:
+                printf("FUNC %s %s\n", curr->arg1, curr->result);
+                break;
+            case TAC_FUNC_BEGIN:
+                printf("BEGIN_FUNC %s\n", curr->result);
+                break;
+            case TAC_FUNC_END:
+                printf("END_FUNC %s\n", curr->result);
+                break;
+            case TAC_PARAM:
+                printf("PARAM %s %s\n", curr->arg1, curr->result);
+                break;
+            case TAC_CALL:
+                if (curr->arg2) {
+                    printf("%s = CALL %s (%s)\n", curr->result, curr->arg1, curr->arg2);
+                } else {
+                    printf("%s = CALL %s\n", curr->result, curr->arg1);
+                }
+                break;
+            case TAC_ARG:
+                printf("ARG %s\n", curr->arg1);
+                break;
+            case TAC_RETURN:
+                printf("RETURN %s\n", curr->arg1 ? curr->arg1 : "");
+                break;
+            case TAC_IFZ:
+                printf("IFZ %s GOTO %s\n", curr->arg1, curr->result);
+                break;
+            case TAC_ENTER_SCOPE:
+                printf("ENTER_SCOPE\n");
+                break;
+            case TAC_EXIT_SCOPE:
+                printf("EXIT_SCOPE\n");
                 break;
                 
             default:
