@@ -50,6 +50,10 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 %token SWITCH CASE DEFAULT BREAK  /* Switch statements */
 %token RETURN               /* Function return */
 
+/* ===== NEW: WHEN LOOP FEATURE ===== */
+%token WHEN WHENOR          /* When loop and or branches */
+/* ===== END: WHEN LOOP FEATURE ===== */
+
 /* I/O */
 %token PRINT                /* Print statement */
 
@@ -66,6 +70,10 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 %type <node> func_decl param_list param block
 %type <node> print_stmt return_stmt func_call arg_list
 %type <node> expr arrayExpr
+
+/* ===== NEW: WHEN LOOP FEATURE ===== */
+%type <node> when_stmt when_or_list when_or_branch break_when_stmt
+/* ===== END: WHEN LOOP FEATURE ===== */
 
 /* ============================================================================
    OPERATOR PRECEDENCE AND ASSOCIATIVITY (lowest to highest)
@@ -128,6 +136,10 @@ stmt:
     | return_stmt
     | func_call ';'
     | BREAK ';' { $$ = createBreak(); }
+    /* ===== NEW: WHEN LOOP FEATURE ===== */
+    | when_stmt
+    | break_when_stmt
+    /* ===== END: WHEN LOOP FEATURE ===== */
     
     /* Grouping */
     | block
@@ -334,6 +346,49 @@ case_Stmt:
         $$ = createDefaultCase($3);
     }
     ;
+
+/* ============================================================================
+   WHEN LOOP STATEMENTS (NEW FEATURE)
+   ============================================================================ */
+
+/* ===== NEW: WHEN LOOP FEATURE ===== */
+/* Main when statement with primary condition and optional branches */
+when_stmt:
+    WHEN '(' expr ')' block when_or_list {
+        $$ = createWhenStmt($3, $5, $6);
+    }
+    | WHEN '(' expr ')' block ELSE block {
+        $$ = createWhenStmtWithElse($3, $5, NULL, $7);
+    }
+    | WHEN '(' expr ')' block when_or_list ELSE block {
+        $$ = createWhenStmtWithElse($3, $5, $6, $8);
+    }
+    ;
+
+/* List of OR branches (can be empty) */
+when_or_list:
+    when_or_branch {
+        $$ = $1;
+    }
+    | when_or_list when_or_branch {
+        $$ = createWhenOrList($1, $2);
+    }
+    ;
+
+/* Individual OR branch with condition and block */
+when_or_branch:
+    WHENOR '(' expr ')' block {
+        $$ = createWhenOrBranch($3, $5);
+    }
+    ;
+
+/* Break-when statement: break when(expr); */
+break_when_stmt:
+    BREAK WHEN '(' expr ')' ';' {
+        $$ = createBreakWhen($4);
+    }
+    ;
+/* ===== END: WHEN LOOP FEATURE ===== */
 
 /* ============================================================================
    FUNCTION RETURNS AND I/O

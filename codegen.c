@@ -11,6 +11,33 @@ FILE* output;
 int tempReg = 0;
 char* currentFunctionType = NULL;
 
+/* ===== NEW: WHEN LOOP FEATURE ===== */
+/* Stack for tracking nested when loop end labels */
+#define MAX_WHEN_DEPTH 10
+char* whenLoopStack[MAX_WHEN_DEPTH];
+int whenLoopDepth = 0;
+
+void pushWhenLabel(char* label) {
+    if (whenLoopDepth < MAX_WHEN_DEPTH) {
+        whenLoopStack[whenLoopDepth++] = label;
+    }
+}
+
+char* popWhenLabel() {
+    if (whenLoopDepth > 0) {
+        return whenLoopStack[--whenLoopDepth];
+    }
+    return NULL;
+}
+
+char* currentWhenLabel() {
+    if (whenLoopDepth > 0) {
+        return whenLoopStack[whenLoopDepth - 1];
+    }
+    return NULL;
+}
+/* ===== END: WHEN LOOP FEATURE ===== */
+
 int getNextTemp() {
     int reg = tempReg;
     tempReg = (tempReg + 1) % 8;
@@ -874,6 +901,202 @@ void genStmt(ASTNode* node) {
             /* for now, assume its handled by parent*/
             break;
         }
+        /* ===== NEW: WHEN LOOP FEATURE ===== */
+        case NODE_WHEN_STMT: {
+            fprintf(output, "\n    # WHEN LOOP - if-else chain that loops\n");
+            fprintf(output, "    # 1. Check primary: if true, execute & exit\n");
+            fprintf(output, "    # 2. Else check OR branches: if true, execute & loop\n");
+            fprintf(output, "    # 3. Else execute else block & loop\n");
+            
+            static int whenCount = 0;
+            int currentWhen = whenCount++;
+            char loopStartLabel[32], loopEndLabel[32];
+            sprintf(loopStartLabel, "when_start_%d", currentWhen);
+            sprintf(loopEndLabel, "when_end_%d", currentWhen);
+            
+            // Push this when loop's end label onto stack for break-when statements
+            char* endLabelCopy = malloc(32);
+            strcpy(endLabelCopy, loopEndLabel);
+            pushWhenLabel(endLabelCopy);
+            
+            // Loop start label
+            fprintf(output, "%s:\n", loopStartLabel);
+            
+            // Step 1: Evaluate primary condition
+            fprintf(output, "    # Step 1: Check primary condition\n");
+            tempReg = 0;
+            genExpr(node->data.when_stmt.primaryCond);
+            int condReg = tempReg > 0 ? tempReg - 1 : 0;
+            
+            // Generate label for skipping primary block if condition is false
+            char skipPrimaryLabel[32];
+            sprintf(skipPrimaryLabel, "skip_primary_%d", currentWhen);
+            
+            // If primary condition is FALSE, skip to OR branches
+            fprintf(output, "    beqz $t%d, %s      # If false, check OR branches\n", 
+                    condReg, skipPrimaryLabel);
+            
+            // Execute primary block (primary condition is true)
+            fprintf(output, "    # Primary condition is true - execute block and exit\n");
+            genStmt(node->data.when_stmt.primaryBlock);
+            
+            // Jump to end (exit the loop)
+            fprintf(output, "    j %s              # Exit when loop\n", loopEndLabel);
+            
+            // Label for when primary is false - check OR branches
+            fprintf(output, "%s:\n", skipPrimaryLabel);
+            fprintf(output, "    # Step 2: Check OR branches\n");
+            
+            if (node->data.when_stmt.orBranches) {
+                // Process each OR branch
+                ASTNode* orCurrent = node->data.when_stmt.orBranches;
+                int orBranchNum = 0;
+                char skipAllOrLabel[32];
+                sprintf(skipAllOrLabel, "skip_all_or_%d", currentWhen);
+                
+                while (orCurrent) {
+                    if (orCurrent->type == NODE_WHEN_OR_LIST) {
+                        if (orCurrent->data.when_or_list.branch &&
+                            orCurrent->data.when_or_list.branch->type == NODE_WHEN_OR_BRANCH) {
+                            
+                            ASTNode* branch = orCurrent->data.when_or_list.branch;
+                            char skipOrLabel[32];
+                            sprintf(skipOrLabel, "skip_or_%d_%d", currentWhen, orBranchNum);
+                            
+                            // Evaluate branch condition
+                            fprintf(output, "    # Check OR branch %d condition\n", orBranchNum);
+                            tempReg = 0;
+                            genExpr(branch->data.when_or_branch.condition);
+                            int branchCondReg = tempReg > 0 ? tempReg - 1 : 0;
+                            
+                            // If condition is false, skip to next OR branch
+                            fprintf(output, "    beqz $t%d, %s   # Skip if false\n", 
+                                    branchCondReg, skipOrLabel);
+                            
+                            // Execute branch block
+                            fprintf(output, "    # OR branch %d is true - execute block and loop\n", orBranchNum);
+                            genStmt(branch->data.when_or_branch.block);
+                            
+                            // Jump back to loop start
+                            fprintf(output, "    j %s              # Loop back to start\n", loopStartLabel);
+                            
+                            fprintf(output, "%s:\n", skipOrLabel);
+                            orBranchNum++;
+                        }
+                        orCurrent = orCurrent->data.when_or_list.next;
+                    } else if (orCurrent->type == NODE_WHEN_OR_BRANCH) {
+                        // Single branch (shouldn't normally happen)
+                        char skipOrLabel[32];
+                        sprintf(skipOrLabel, "skip_or_%d_%d", currentWhen, orBranchNum);
+                        
+                        tempReg = 0;
+                        genExpr(orCurrent->data.when_or_branch.condition);
+                        int branchCondReg = tempReg > 0 ? tempReg - 1 : 0;
+                        
+                        fprintf(output, "    beqz $t%d, %s\n", branchCondReg, skipOrLabel);
+                        genStmt(orCurrent->data.when_or_branch.block);
+                        fprintf(output, "    j %s\n", loopStartLabel);
+                        fprintf(output, "%s:\n", skipOrLabel);
+                        break;
+                    } else {
+                        break;
+                    }
+                }
+            }
+            
+            // Step 3: No OR branch matched, execute else if present
+            fprintf(output, "    # Step 3: No OR branch matched - execute else block\n");
+            if (node->data.when_stmt.elseBlock) {
+                genStmt(node->data.when_stmt.elseBlock);
+            }
+            
+            // Loop back to start (after else)
+            fprintf(output, "    j %s              # Loop back to start\n", loopStartLabel);
+            
+            // Loop end label
+            fprintf(output, "%s:\n", loopEndLabel);
+            fprintf(output, "    # End of when loop\n");
+            
+            // Pop the when label from stack
+            popWhenLabel();
+            
+            tempReg = 0;
+            break;
+        }
+        
+        case NODE_WHEN_OR_LIST: {
+            // Process when-or branches
+            ASTNode* current = node;
+            while (current) {
+                if (current->type == NODE_WHEN_OR_LIST) {
+                    if (current->data.when_or_list.branch &&
+                        current->data.when_or_list.branch->type == NODE_WHEN_OR_BRANCH) {
+                        
+                        ASTNode* branch = current->data.when_or_list.branch;
+                        static int orBranchCount = 0;
+                        int branchId = orBranchCount++;
+                        char skipLabel[32];
+                        sprintf(skipLabel, "skip_or_%d", branchId);
+                        
+                        // Evaluate branch condition
+                        fprintf(output, "    # Check OR branch condition\n");
+                        tempReg = 0;
+                        genExpr(branch->data.when_or_branch.condition);
+                        int branchCondReg = tempReg > 0 ? tempReg - 1 : 0;
+                        
+                        // If condition is false, skip this branch
+                        fprintf(output, "    beqz $t%d, %s   # Skip if false\n", 
+                                branchCondReg, skipLabel);
+                        
+                        // Execute branch block
+                        fprintf(output, "    # Execute OR branch block\n");
+                        genStmt(branch->data.when_or_branch.block);
+                        
+                        fprintf(output, "%s:\n", skipLabel);
+                    }
+                    current = current->data.when_or_list.next;
+                } else if (current->type == NODE_WHEN_OR_BRANCH) {
+                    // Single branch
+                    static int orBranchCount = 0;
+                    int branchId = orBranchCount++;
+                    char skipLabel[32];
+                    sprintf(skipLabel, "skip_or_%d", branchId);
+                    
+                    tempReg = 0;
+                    genExpr(current->data.when_or_branch.condition);
+                    int branchCondReg = tempReg > 0 ? tempReg - 1 : 0;
+                    
+                    fprintf(output, "    beqz $t%d, %s   # Skip if false\n", 
+                            branchCondReg, skipLabel);
+                    genStmt(current->data.when_or_branch.block);
+                    fprintf(output, "%s:\n", skipLabel);
+                    break;
+                } else {
+                    break;
+                }
+            }
+            tempReg = 0;
+            break;
+        }
+        
+        case NODE_BREAK_WHEN: {
+            fprintf(output, "    # BREAK WHEN - exit when loop if condition is true\n");
+            tempReg = 0;
+            genExpr(node->data.break_when.expr);
+            int exprReg = tempReg > 0 ? tempReg - 1 : 0;
+            
+            char* whenEndLabel = currentWhenLabel();
+            if (whenEndLabel) {
+                // If condition is true, jump to when loop end
+                fprintf(output, "    bnez $t%d, %s     # If true, exit when loop\n", 
+                        exprReg, whenEndLabel);
+            } else {
+                fprintf(output, "    # Warning: break when outside of when loop\n");
+            }
+            tempReg = 0;
+            break;
+        }
+        /* ===== END: WHEN LOOP FEATURE ===== */
         
 
         

@@ -46,6 +46,13 @@ typedef enum {
     ,NODE_CASE      /* Single case statement */
     ,NODE_BREAK     /* Break statement */
     ,NODE_DEFAULT_CASE /* Default case in switch */
+
+    /* ===== NEW: WHEN LOOP FEATURE ===== */
+    ,NODE_WHEN_STMT /* When loop statement */
+    ,NODE_WHEN_OR_LIST /* List of when-or branches */
+    ,NODE_WHEN_OR_BRANCH /* Single when-or branch */
+    ,NODE_BREAK_WHEN /* Break-when statement */
+    /* ===== END: WHEN LOOP FEATURE ===== */
 } NodeType;
 
 typedef enum {
@@ -246,6 +253,34 @@ typedef struct ASTNode {
             struct ASTNode* case_item;   /* current case*/
             struct ASTNode* next;        /* next case */
         } case_list;
+
+
+        /* ===== NEW: WHEN LOOP FEATURE ===== */
+        /* When statement structure (NODE_WHEN_STMT) */
+        struct {
+            struct ASTNode* primaryCond;  /* Primary when condition */
+            struct ASTNode* primaryBlock; /* Primary when block */
+            struct ASTNode* orBranches;   /* List of OR branches (NODE_WHEN_OR_LIST) */
+            struct ASTNode* elseBlock;    /* Optional else block (may be NULL) */
+        } when_stmt;
+
+        /* When-or branch structure (NODE_WHEN_OR_BRANCH) */
+        struct {
+            struct ASTNode* condition;    /* Branch condition */
+            struct ASTNode* block;        /* Branch block */
+        } when_or_branch;
+
+        /* When-or list structure (NODE_WHEN_OR_LIST) */
+        struct {
+            struct ASTNode* branch;       /* Current branch */
+            struct ASTNode* next;         /* Next branch in list */
+        } when_or_list;
+
+        /* Break-when structure (NODE_BREAK_WHEN) */
+        struct {
+            struct ASTNode* expr;         /* Expression for break when */
+        } break_when;
+        /* ===== END: WHEN LOOP FEATURE ===== */
     } data;
 
     // General purpose pointers for constructs needing multiple sub-nodes (if statements, etc.)
@@ -301,7 +336,15 @@ ASTNode* createSwitch(ASTNode* expr, ASTNode* cases);               /* Switch st
 ASTNode* createCase(int value, ASTNode* stmts);                     /* Single case*/
 ASTNode* createDefaultCase(ASTNode* stmts);
 ASTNode* createCaseList(ASTNode* case1, ASTNode* case2);         /* List of cases */
-ASTNode* createBreak();                                            /* Break statement */
+ASTNode* createBreak();     
+                                       /* Break statement */
+/* ===== NEW: WHEN LOOP FEATURE ===== */
+ASTNode* createWhenStmt(ASTNode* cond, ASTNode* block, ASTNode* orBranches); /* When statement */
+ASTNode* createWhenStmtWithElse(ASTNode* cond, ASTNode* block, ASTNode* orBranches, ASTNode* elseBlock); /* When with else */
+ASTNode* createWhenOrBranch(ASTNode* cond, ASTNode* block);       /* When-or branch */
+ASTNode* createWhenOrList(ASTNode* branch1, ASTNode* branch2);    /* List of or branches */
+ASTNode* createBreakWhen(ASTNode* expr);                           /* Break-when statement */
+/* ===== END: WHEN LOOP FEATURE ===== */
 /* AST DISPLAY FUNCTION */
 void printAST(ASTNode* node, int level);                        /* Pretty-print the AST */
 

@@ -20,6 +20,10 @@
 "case"          { return CASE; }
 "default"       { return DEFAULT; }
 "break"         { return BREAK; }
+
+
+"when"          { return WHEN; }
+"or"            { return WHENOR; }
 [a-zA-Z_][a-zA-Z0-9_]* {
     yylval.str = strdup(yytext);
     return ID;

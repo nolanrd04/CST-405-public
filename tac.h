@@ -62,6 +62,14 @@ typedef enum {
     TAC_CASE,          /* Case statement */
     TAC_DEFAULT        /* Default case */
 
+    /* ===== NEW: WHEN LOOP FEATURE ===== */
+    ,TAC_WHEN_START,   /* Mark start of when loop */
+    TAC_WHEN_CHECK,   /* Check when condition */
+    TAC_WHEN_OR,      /* When OR branch check */
+    TAC_WHEN_END,     /* Mark end of when loop */
+    TAC_BREAK_WHEN    /* Break-when statement */
+    /* ===== END: WHEN LOOP FEATURE ===== */
+
 } TACOp;
 
 /* TAC INSTRUCTION STRUCTURE */
@@ -90,6 +98,11 @@ void appendTAC(TACInstr* instr);                                  /* Add instruc
 void generateTAC(ASTNode* node);                                  /* Convert AST to TAC */
 char* generateTACExpr(ASTNode* node);                             /* Generate TAC for expression */
 void generateTAC_If(ASTNode* node);                             /* Generate TAC for if statement */
+
+/* ===== NEW: WHEN LOOP FEATURE ===== */
+void generateTAC_When(ASTNode* node);                            /* Generate TAC for when loop */
+void generateTAC_WhenOrList(ASTNode* node);                      /* Generate TAC for or branches */
+/* ===== END: WHEN LOOP FEATURE ===== */
 
 /*Function Specific TAC generation*/
 void generateFunctionTAC(ASTNode* node);                       /* Generate TAC for functions */

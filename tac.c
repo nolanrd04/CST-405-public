@@ -491,6 +491,19 @@ void generateTAC(ASTNode* node) {
             generateTAC_If(node);
             break;
         }
+        
+        /* ===== NEW: WHEN LOOP FEATURE ===== */
+        case NODE_WHEN_STMT: {
+            generateTAC_When(node);
+            break;
+        }
+        case NODE_BREAK_WHEN: {
+            // Break-when: evaluate condition, if true goto when_done
+            char* exprResult = generateTACExpr(node->data.break_when.expr);
+            appendTAC(createTAC(TAC_BREAK_WHEN, exprResult, NULL, NULL));
+            break;
+        }
+        /* ===== END: WHEN LOOP FEATURE ===== */
             
         default:
             break;
@@ -1224,6 +1237,24 @@ void printOptimizedTAC() {
             case TAC_EXIT_SCOPE:
                 printf("EXIT_SCOPE\n");
                 break;
+            /* ===== NEW: WHEN LOOP FEATURE ===== */
+            case TAC_WHEN_START:
+                printf("WHEN_START %s\n", curr->result);
+                break;
+            case TAC_WHEN_CHECK:
+                printf("WHEN_CHECK %s GOTO %s  // If primary condition true, exit loop\n", 
+                       curr->arg1, curr->result);
+                break;
+            case TAC_WHEN_OR:
+                printf("WHEN_OR %s\n", curr->arg1);
+                break;
+            case TAC_WHEN_END:
+                printf("WHEN_END %s\n", curr->result);
+                break;
+            case TAC_BREAK_WHEN:
+                printf("BREAK_WHEN %s  // Break when condition is true\n", curr->arg1);
+                break;
+            /* ===== END: WHEN LOOP FEATURE ===== */
                 
             default:
                 printf("UNKNOWN_OP_%d\n", curr->op);  // ✅ Debug unknown ops
@@ -1232,3 +1263,86 @@ void printOptimizedTAC() {
         curr = curr->next;
     }
 }
+
+/* ===== NEW: WHEN LOOP FEATURE ===== */
+/* Generate TAC for when loop statement 
+ * A when loop keeps looping until the primary condition is true
+ * Before each iteration, it can execute or-branch blocks if their conditions are true
+ * The break when statement can exit the loop
+ */
+void generateTAC_When(ASTNode* node) {
+    if (!node || node->type != NODE_WHEN_STMT) return;
+
+    // Generate labels for the when loop
+    char* loopStartLabel = newLabel();
+    char* loopEndLabel = newLabel();
+    
+    // Emit loop start label
+    appendTAC(createTAC(TAC_LABEL, loopStartLabel, NULL, NULL));
+    
+    // Generate TAC for primary condition
+    char* primaryCond = generateTACExpr(node->data.when_stmt.primaryCond);
+    
+    // If primary condition is true, exit loop
+    appendTAC(createTAC(TAC_WHEN_CHECK, primaryCond, NULL, loopEndLabel));
+    
+    // Execute primary block
+    generateTAC(node->data.when_stmt.primaryBlock);
+    
+    // Generate OR branches (if any)
+    if (node->data.when_stmt.orBranches) {
+        generateTAC_WhenOrList(node->data.when_stmt.orBranches);
+    }
+    
+    // Execute else block (if any), otherwise loop back
+    if (node->data.when_stmt.elseBlock) {
+        generateTAC(node->data.when_stmt.elseBlock);
+    }
+    
+    // Jump back to loop start
+    appendTAC(createTAC(TAC_GOTO, NULL, NULL, loopStartLabel));
+    
+    // Emit loop end label
+    appendTAC(createTAC(TAC_LABEL, loopEndLabel, NULL, NULL));
+}
+
+/* Generate TAC for when-or branch list */
+void generateTAC_WhenOrList(ASTNode* node) {
+    if (!node) return;
+    
+    if (node->type == NODE_WHEN_OR_LIST) {
+        // Process current branch
+        if (node->data.when_or_list.branch) {
+            ASTNode* branch = node->data.when_or_list.branch;
+            if (branch->type == NODE_WHEN_OR_BRANCH) {
+                // Generate condition check
+                char* branchCond = generateTACExpr(branch->data.when_or_branch.condition);
+                
+                // Generate label for skipping this branch if false
+                char* skipLabel = newLabel();
+                
+                // If condition is false, skip branch
+                appendTAC(createTAC(TAC_IFZ, branchCond, NULL, skipLabel));
+                
+                // Execute branch block
+                generateTAC(branch->data.when_or_branch.block);
+                
+                // Skip label for when branch was false
+                appendTAC(createTAC(TAC_LABEL, skipLabel, NULL, NULL));
+            }
+        }
+        
+        // Process rest of branches
+        if (node->data.when_or_list.next) {
+            generateTAC_WhenOrList(node->data.when_or_list.next);
+        }
+    } else if (node->type == NODE_WHEN_OR_BRANCH) {
+        // Single branch (shouldn't happen, but handle it)
+        char* branchCond = generateTACExpr(node->data.when_or_branch.condition);
+        char* skipLabel = newLabel();
+        appendTAC(createTAC(TAC_IFZ, branchCond, NULL, skipLabel));
+        generateTAC(node->data.when_or_branch.block);
+        appendTAC(createTAC(TAC_LABEL, skipLabel, NULL, NULL));
+    }
+}
+/* ===== END: WHEN LOOP FEATURE ===== */

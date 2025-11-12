@@ -454,5 +454,94 @@ void printAST(ASTNode* node, int level) {
         case NODE_BREAK:
             printf("BREAK\n");
             break;
+        /* ===== NEW: WHEN LOOP FEATURE ===== */
+        case NODE_WHEN_STMT:
+            printf("WHEN STATEMENT:\n");
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Primary Condition:\n");
+            printAST(node->data.when_stmt.primaryCond, level + 2);
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Primary Block:\n");
+            printAST(node->data.when_stmt.primaryBlock, level + 2);
+            if (node->data.when_stmt.orBranches) {
+                for (int i = 0; i < level + 1; i++) printf("  ");
+                printf("OR Branches:\n");
+                printAST(node->data.when_stmt.orBranches, level + 2);
+            }
+            if (node->data.when_stmt.elseBlock) {
+                for (int i = 0; i < level + 1; i++) printf("  ");
+                printf("ELSE Block:\n");
+                printAST(node->data.when_stmt.elseBlock, level + 2);
+            }
+            break;
+        case NODE_WHEN_OR_LIST:
+            printAST(node->data.when_or_list.branch, level);
+            if (node->data.when_or_list.next) {
+                printAST(node->data.when_or_list.next, level);
+            }
+            break;
+        case NODE_WHEN_OR_BRANCH:
+            printf("OR BRANCH:\n");
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Condition:\n");
+            printAST(node->data.when_or_branch.condition, level + 2);
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Block:\n");
+            printAST(node->data.when_or_branch.block, level + 2);
+            break;
+        case NODE_BREAK_WHEN:
+            printf("BREAK WHEN:\n");
+            printAST(node->data.break_when.expr, level + 1);
+            break;
+        /* ===== END: WHEN LOOP FEATURE ===== */
     }
+}
+
+/* ===== NEW: WHEN LOOP FEATURE ===== */
+/* Create when statement with primary condition, block, and optional or branches */
+ASTNode* createWhenStmt(ASTNode* cond, ASTNode* block, ASTNode* orBranches) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_WHEN_STMT;
+    node->data.when_stmt.primaryCond = cond;
+    node->data.when_stmt.primaryBlock = block;
+    node->data.when_stmt.orBranches = orBranches;
+    node->data.when_stmt.elseBlock = NULL;
+    return node;
+}
+
+/* Create when statement with else block */
+ASTNode* createWhenStmtWithElse(ASTNode* cond, ASTNode* block, ASTNode* orBranches, ASTNode* elseBlock) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_WHEN_STMT;
+    node->data.when_stmt.primaryCond = cond;
+    node->data.when_stmt.primaryBlock = block;
+    node->data.when_stmt.orBranches = orBranches;
+    node->data.when_stmt.elseBlock = elseBlock;
+    return node;
+}
+
+/* Create when-or branch with condition and block */
+ASTNode* createWhenOrBranch(ASTNode* cond, ASTNode* block) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_WHEN_OR_BRANCH;
+    node->data.when_or_branch.condition = cond;
+    node->data.when_or_branch.block = block;
+    return node;
+}
+
+/* Create list of when-or branches */
+ASTNode* createWhenOrList(ASTNode* branch1, ASTNode* branch2) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_WHEN_OR_LIST;
+    node->data.when_or_list.branch = branch1;
+    node->data.when_or_list.next = branch2;
+    return node;
+}
+
+/* Create break-when statement */
+ASTNode* createBreakWhen(ASTNode* expr) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_BREAK_WHEN;
+    node->data.break_when.expr = expr;
+    return node;
 }
