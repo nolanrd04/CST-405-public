@@ -70,6 +70,10 @@ typedef enum {
     TAC_BREAK_WHEN    /* Break-when statement */
     /* ===== END: WHEN LOOP FEATURE ===== */
 
+    ,TAC_WHILE_START,  /* Mark start of while loop */
+    TAC_WHILE_CHECK,  /* Check while condition */
+    TAC_WHILE_END     /* Mark end of while loop */
+
 } TACOp;
 
 /* TAC INSTRUCTION STRUCTURE */
@@ -103,6 +107,8 @@ void generateTAC_If(ASTNode* node);                             /* Generate TAC 
 void generateTAC_When(ASTNode* node);                            /* Generate TAC for when loop */
 void generateTAC_WhenOrList(ASTNode* node);                      /* Generate TAC for or branches */
 /* ===== END: WHEN LOOP FEATURE ===== */
+
+void generateTAC_While(ASTNode* node);                           /* Generate TAC for while loop */
 
 /*Function Specific TAC generation*/
 void generateFunctionTAC(ASTNode* node);                       /* Generate TAC for functions */

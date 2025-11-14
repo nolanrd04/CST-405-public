@@ -17,6 +17,7 @@ typedef enum {
     NODE_DECL,      /* Variable declaration (e.g., int x) */
     NODE_ASSIGN,    /* Assignment statement (e.g., x = 10) */
     NODE_PRINT,     /* Print statement (e.g., print(x)) */
+    NODE_PRINTLN,   /* Println statement (e.g., println(x)) */
     NODE_IF,       /* If statement (e.g., if (cond) { ... } else { ... }) */
     NODE_STMT_LIST,  /* List of statements (program structure) */
     NODE_DECL_ASSIGN, /* Variable declaration with a type */
@@ -53,6 +54,11 @@ typedef enum {
     ,NODE_WHEN_OR_BRANCH /* Single when-or branch */
     ,NODE_BREAK_WHEN /* Break-when statement */
     /* ===== END: WHEN LOOP FEATURE ===== */
+    ,NODE_WHILE_STMT /* While loop statement */
+    
+    /* ===== NEW: STRING LITERAL SUPPORT ===== */
+    ,NODE_STRING /* String literal */
+    /* ===== END: STRING LITERAL SUPPORT ===== */
 } NodeType;
 
 typedef enum {
@@ -280,7 +286,19 @@ typedef struct ASTNode {
         struct {
             struct ASTNode* expr;         /* Expression for break when */
         } break_when;
-        /* ===== END: WHEN LOOP FEATURE ===== */
+        
+        /* While loop structure (NODE_WHILE_STMT) */
+        struct {
+            struct ASTNode* condition;    /* Loop condition */
+            struct ASTNode* block;        /* Loop body */
+        } while_stmt;
+        
+        /* ===== NEW: STRING LITERAL SUPPORT ===== */
+        /* String literal structure (NODE_STRING) */
+        struct {
+            char* value;                  /* String value */
+        } string_literal;
+        /* ===== END: STRING LITERAL SUPPORT ===== */
     } data;
 
     // General purpose pointers for constructs needing multiple sub-nodes (if statements, etc.)
@@ -296,12 +314,17 @@ ASTNode* createNum(double value, int isFloat);                                  
 ASTNode* createVar(char* name);     /* Create variable node */
 ASTNode* createBool(int value);                            /* Create boolean node */
 
+/* ===== NEW: STRING LITERAL SUPPORT ===== */
+ASTNode* createString(char* value);                        /* Create string literal node */
+/* ===== END: STRING LITERAL SUPPORT ===== */
+
 ASTNode* createUnaryOp(BinOpType op, ASTNode* operand); /* Create unary op node */
 ASTNode* createBinOp(BinOpType op, ASTNode* left, ASTNode* right);   /* Create binary op node */
 
 ASTNode* createDecl(char* varType, char* name);                                 /* Create declaration node */
 ASTNode* createAssign(char* var, ASTNode* value);               /* Create assignment node */
 ASTNode* createPrint(ASTNode* expr);                            /* Create print node */
+ASTNode* createPrintln(ASTNode* expr);                          /* Create println node */
 ASTNode* createIfNode(ASTNode* condition, ASTNode* thenBranch, ASTNode* elseBranch); /* Create if statement node */
 ASTNode* createStmtList(ASTNode* stmt1, ASTNode* stmt2);  
       /* Create statement list */
@@ -345,6 +368,9 @@ ASTNode* createWhenOrBranch(ASTNode* cond, ASTNode* block);       /* When-or bra
 ASTNode* createWhenOrList(ASTNode* branch1, ASTNode* branch2);    /* List of or branches */
 ASTNode* createBreakWhen(ASTNode* expr);                           /* Break-when statement */
 /* ===== END: WHEN LOOP FEATURE ===== */
+/* ===== NEW: WHILE LOOP FEATURE ===== */
+ASTNode* createWhileStmt(ASTNode* cond, ASTNode* block);          /* While loop statement */
+/* ===== END: WHILE LOOP FEATURE ===== */
 /* AST DISPLAY FUNCTION */
 void printAST(ASTNode* node, int level);                        /* Pretty-print the AST */
 

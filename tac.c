@@ -112,6 +112,14 @@ char* generateTACExpr(ASTNode* node) {
         case NODE_VAR:
             return strdup(node->data.name);
         
+        /* ===== NEW: STRING LITERAL SUPPORT ===== */
+        case NODE_STRING: {
+            char* temp = malloc(256);
+            snprintf(temp, 256, "\"%s\"", node->data.string_literal.value);
+            return temp;
+        }
+        /* ===== END: STRING LITERAL SUPPORT ===== */
+
         case NODE_BINOP: {
             char* left = generateTACExpr(node->data.binop.left);
             char* right = generateTACExpr(node->data.binop.right);
@@ -504,6 +512,11 @@ void generateTAC(ASTNode* node) {
             break;
         }
         /* ===== END: WHEN LOOP FEATURE ===== */
+        
+        case NODE_WHILE_STMT: {
+            generateTAC_While(node);
+            break;
+        }
             
         default:
             break;
@@ -1106,6 +1119,24 @@ void optimizeTAC() {
             case TAC_EXIT_SCOPE:
                 newInstr = createTAC(curr->op, NULL, NULL, NULL);
                 break;
+
+            /* ===== NEW: WHEN LOOP FEATURE ===== */
+            case TAC_WHEN_START:
+            case TAC_WHEN_CHECK:
+            case TAC_WHEN_OR:
+            case TAC_WHEN_END:
+            case TAC_BREAK_WHEN:
+                newInstr = createTAC(curr->op, curr->arg1, curr->arg2, curr->result);
+                break;
+            /* ===== END: WHEN LOOP FEATURE ===== */
+
+            /* ===== NEW: WHILE LOOP FEATURE ===== */
+            case TAC_WHILE_START:
+            case TAC_WHILE_CHECK:
+            case TAC_WHILE_END:
+                newInstr = createTAC(curr->op, curr->arg1, curr->arg2, curr->result);
+                break;
+            /* ===== END: WHILE LOOP FEATURE ===== */
         }
         
         if (newInstr) {
@@ -1255,6 +1286,19 @@ void printOptimizedTAC() {
                 printf("BREAK_WHEN %s  // Break when condition is true\n", curr->arg1);
                 break;
             /* ===== END: WHEN LOOP FEATURE ===== */
+            
+            /* ===== NEW: WHILE LOOP FEATURE ===== */
+            case TAC_WHILE_START:
+                printf("WHILE_START %s\n", curr->result);
+                break;
+            case TAC_WHILE_CHECK:
+                printf("WHILE_CHECK %s GOTO %s  // If condition false, exit loop\n", 
+                       curr->arg1, curr->result);
+                break;
+            case TAC_WHILE_END:
+                printf("WHILE_END %s\n", curr->result);
+                break;
+            /* ===== END: WHILE LOOP FEATURE ===== */
                 
             default:
                 printf("UNKNOWN_OP_%d\n", curr->op);  // ✅ Debug unknown ops
@@ -1346,3 +1390,34 @@ void generateTAC_WhenOrList(ASTNode* node) {
     }
 }
 /* ===== END: WHEN LOOP FEATURE ===== */
+
+/* ===== NEW: WHILE LOOP FEATURE ===== */
+/* Generate TAC for while loop statement 
+ * Standard while loop: execute block while condition is true
+ */
+void generateTAC_While(ASTNode* node) {
+    if (!node || node->type != NODE_WHILE_STMT) return;
+
+    // Generate labels for the while loop
+    char* loopStartLabel = newLabel();
+    char* loopEndLabel = newLabel();
+    
+    // Emit loop start label
+    appendTAC(createTAC(TAC_LABEL, loopStartLabel, NULL, NULL));
+    
+    // Generate TAC for condition
+    char* condResult = generateTACExpr(node->data.while_stmt.condition);
+    
+    // If condition is false, exit loop (IFZ = if zero/false)
+    appendTAC(createTAC(TAC_IFZ, condResult, NULL, loopEndLabel));
+    
+    // Execute loop body
+    generateTAC(node->data.while_stmt.block);
+    
+    // Jump back to loop start
+    appendTAC(createTAC(TAC_GOTO, NULL, NULL, loopStartLabel));
+    
+    // Emit loop end label
+    appendTAC(createTAC(TAC_LABEL, loopEndLabel, NULL, NULL));
+}
+/* ===== END: WHILE LOOP FEATURE ===== */

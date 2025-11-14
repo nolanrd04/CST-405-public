@@ -42,6 +42,10 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 /* Identifiers */
 %token <str> ID             /* Identifier/variable name */
 
+/* ===== NEW: STRING LITERAL SUPPORT ===== */
+%token <str> STRING         /* String literal */
+/* ===== END: STRING LITERAL SUPPORT ===== */
+
 /* Data Types */
 %token INT FLOAT VOID BOOL
 
@@ -54,8 +58,10 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 %token WHEN WHENOR          /* When loop and or branches */
 /* ===== END: WHEN LOOP FEATURE ===== */
 
+%token WHILE                /* While loop */
+
 /* I/O */
-%token PRINT                /* Print statement */
+%token PRINT PRINTLN            /* Print and println statements */
 
 /* Operators */
 %token EQ NEQ LT GT LTE GTE   /* Comparison operators */
@@ -74,6 +80,7 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 /* ===== NEW: WHEN LOOP FEATURE ===== */
 %type <node> when_stmt when_or_list when_or_branch break_when_stmt
 /* ===== END: WHEN LOOP FEATURE ===== */
+%type <node> while_stmt
 
 /* ============================================================================
    OPERATOR PRECEDENCE AND ASSOCIATIVITY (lowest to highest)
@@ -140,6 +147,7 @@ stmt:
     | when_stmt
     | break_when_stmt
     /* ===== END: WHEN LOOP FEATURE ===== */
+    | while_stmt
     
     /* Grouping */
     | block
@@ -351,6 +359,13 @@ case_Stmt:
    WHEN LOOP STATEMENTS (NEW FEATURE)
    ============================================================================ */
 
+/* While loop: loop while condition is true */
+while_stmt:
+    WHILE '(' expr ')' block {
+        $$ = createWhileStmt($3, $5);
+    }
+    ;
+
 /* ===== NEW: WHEN LOOP FEATURE ===== */
 /* Main when statement with primary condition and optional branches */
 when_stmt:
@@ -407,6 +422,9 @@ print_stmt:
     PRINT '(' expr ')' ';' { 
         $$ = createPrint($3);
     }
+    | PRINTLN '(' expr ')' ';' {
+        $$ = createPrintln($3);
+    }
     ;
 
 /* ============================================================================
@@ -440,6 +458,12 @@ expr:
     | FALSE {
         $$ = createNum(0, 0);
     }
+    /* ===== NEW: STRING LITERAL SUPPORT ===== */
+    | STRING {
+        $$ = createString($1);
+        free($1);
+    }
+    /* ===== END: STRING LITERAL SUPPORT ===== */
     
     /* Variables and array access */
     | ID { 

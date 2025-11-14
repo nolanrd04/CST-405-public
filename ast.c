@@ -36,6 +36,16 @@ ASTNode* createBool(int value) {
     return node;
 }
 
+/* ===== NEW: STRING LITERAL SUPPORT ===== */
+/* Create a string literal node */
+ASTNode* createString(char* value) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_STRING;
+    node->data.string_literal.value = strdup(value);  /* Copy the string value */
+    return node;
+}
+/* ===== END: STRING LITERAL SUPPORT ===== */
+
 /* Create a unary operation node */
 ASTNode* createUnaryOp(BinOpType op, ASTNode* operand) {
     ASTNode* node = malloc(sizeof(ASTNode));
@@ -78,6 +88,14 @@ ASTNode* createPrint(ASTNode* expr) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_PRINT;
     node->data.expr = expr;  /* Expression to print */
+    return node;
+}
+
+/* Create a println statement node */
+ASTNode* createPrintln(ASTNode* expr) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_PRINTLN;
+    node->data.expr = expr;  /* Expression to print with newline */
     return node;
 }
 
@@ -304,6 +322,11 @@ void printAST(ASTNode* node, int level) {
         case NODE_BOOL:
             printf("BOOL: %s\n", node->data.boolVal.bool_value ? "true" : "false");
             break;
+        /* ===== NEW: STRING LITERAL SUPPORT ===== */
+        case NODE_STRING:
+            printf("STRING: \"%s\"\n", node->data.string_literal.value);
+            break;
+        /* ===== END: STRING LITERAL SUPPORT ===== */
         case NODE_VAR:
             printf("VAR: %s\n", node->data.name);
             break;
@@ -494,6 +517,15 @@ void printAST(ASTNode* node, int level) {
             printAST(node->data.break_when.expr, level + 1);
             break;
         /* ===== END: WHEN LOOP FEATURE ===== */
+        case NODE_WHILE_STMT:
+            printf("WHILE STATEMENT:\n");
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Condition:\n");
+            printAST(node->data.while_stmt.condition, level + 2);
+            for (int i = 0; i < level + 1; i++) printf("  ");
+            printf("Body:\n");
+            printAST(node->data.while_stmt.block, level + 2);
+            break;
     }
 }
 
@@ -543,5 +575,15 @@ ASTNode* createBreakWhen(ASTNode* expr) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->type = NODE_BREAK_WHEN;
     node->data.break_when.expr = expr;
+    return node;
+}
+/* ===== END: WHEN LOOP FEATURE ===== */
+
+/* Create while loop statement */
+ASTNode* createWhileStmt(ASTNode* cond, ASTNode* block) {
+    ASTNode* node = malloc(sizeof(ASTNode));
+    node->type = NODE_WHILE_STMT;
+    node->data.while_stmt.condition = cond;
+    node->data.while_stmt.block = block;
     return node;
 }

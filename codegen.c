@@ -38,6 +38,31 @@ char* currentWhenLabel() {
 }
 /* ===== END: WHEN LOOP FEATURE ===== */
 
+/* ===== NEW: STRING LITERAL SUPPORT ===== */
+/* String table for tracking string literals */
+#define MAX_STRINGS 100
+struct {
+    char* value;
+    int id;
+} stringTable[MAX_STRINGS];
+int stringCount = 0;
+
+int addString(char* value) {
+    for (int i = 0; i < stringCount; i++) {
+        if (strcmp(stringTable[i].value, value) == 0) {
+            return stringTable[i].id;  /* Return existing ID */
+        }
+    }
+    if (stringCount < MAX_STRINGS) {
+        stringTable[stringCount].value = strdup(value);
+        stringTable[stringCount].id = stringCount;
+        return stringCount++;
+    }
+    return -1;
+}
+/* ===== END: STRING LITERAL SUPPORT ===== */
+/* ===== END: WHEN LOOP FEATURE ===== */
+
 int getNextTemp() {
     int reg = tempReg;
     tempReg = (tempReg + 1) % 8;
@@ -119,6 +144,12 @@ void genIntToFloatConversion(int tReg, int fReg) {
     fprintf(output, "    cvt.s.w $f%d, $f%d\n", fReg, fReg);
 }
 
+// Helper function to check if expression is a string
+int isExprString(ASTNode* node) {
+    if (!node) return 0;
+    return (node->type == NODE_STRING);
+}
+
 void genExpr(ASTNode* node);
 
 
@@ -141,6 +172,19 @@ void genExpr(ASTNode* node) {
             tempReg++;
             break;
         }
+
+        /* ===== NEW: STRING LITERAL SUPPORT ===== */
+        case NODE_STRING: {
+            int stringId = addString(node->data.string_literal.value);
+            
+            /* Generate string data section reference */
+            fprintf(output, "    la $t%d, str_%d      # Load address of string literal\n", 
+                    tempReg, stringId);
+            
+            tempReg++;
+            break;
+        }
+        /* ===== END: STRING LITERAL SUPPORT ===== */
 
         case NODE_VAR: {
             int offset = getVarOffset(node->data.name);
@@ -478,48 +522,127 @@ void genStmt(ASTNode* node) {
         
         case NODE_PRINT: {
             tempReg = 0;
-            genExpr(node->data.expr);
-
-            // Use the helper function to determine if expression is float or boolean
-            int isFloat = isExprFloat(node->data.expr);
-            int isBool = isExprBool(node->data.expr);
-
-            if (isFloat) {
-                fprintf(output, "    # Print float\n");
-                fprintf(output, "    mov.s $f12, $f0\n");
-                fprintf(output, "    li $v0, 2\n");
+            
+            // Check if we're printing a string
+            int isString = isExprString(node->data.expr);
+            
+            if (isString) {
+                // For strings, generate the expression to load address
+                genExpr(node->data.expr);
+                int stringReg = tempReg > 0 ? tempReg - 1 : 0;
+                fprintf(output, "    # Print string (no newline)\n");
+                fprintf(output, "    move $a0, $t%d\n", stringReg);
+                fprintf(output, "    li $v0, 4\n");
                 fprintf(output, "    syscall\n");
-            } else if (isBool) {
-            /* Print "true" or "false" for booleans instead of 1 or 0*/
-            int printReg = tempReg > 0 ? tempReg - 1 : 0;
-            fprintf(output, "    # Print boolean\n");
-            
-            static int boolPrintCount = 0;
-            int currentPrint = boolPrintCount++;
-            
-            fprintf(output, "    beqz $t%d, print_false_%d\n", 
-                    printReg, currentPrint);
-            
-            /* Print "true" */
-            fprintf(output, "    la $a0, true_str\n");
-            fprintf(output, "    li $v0, 4\n");
-            fprintf(output, "    syscall\n");
-            fprintf(output, "    j print_bool_end_%d\n", currentPrint);
-            
-            /* Print "false" */
-            fprintf(output, "print_false_%d:\n", currentPrint);
-            fprintf(output, "    la $a0, false_str\n");
-            fprintf(output, "    li $v0, 4\n");
-            fprintf(output, "    syscall\n");
-            
-            fprintf(output, "print_bool_end_%d:\n", currentPrint);
             } else {
-                int printReg = tempReg > 0 ? tempReg - 1 : 0;
-                fprintf(output, "    # Print integer\n");
-                fprintf(output, "    move $a0, $t%d\n", printReg);
-                fprintf(output, "    li $v0, 1\n");
-                fprintf(output, "    syscall\n");
+                // Non-string case
+                genExpr(node->data.expr);
+
+                // Use the helper function to determine if expression is float or boolean
+                int isFloat = isExprFloat(node->data.expr);
+                int isBool = isExprBool(node->data.expr);
+
+                if (isFloat) {
+                    fprintf(output, "    # Print float (no newline)\n");
+                    fprintf(output, "    mov.s $f12, $f0\n");
+                    fprintf(output, "    li $v0, 2\n");
+                    fprintf(output, "    syscall\n");
+                } else if (isBool) {
+                    /* Print "true" or "false" for booleans instead of 1 or 0 (no newline)*/
+                    int printReg = tempReg > 0 ? tempReg - 1 : 0;
+                    fprintf(output, "    # Print boolean (no newline)\n");
+                    
+                    static int boolPrintCount = 0;
+                    int currentPrint = boolPrintCount++;
+                    
+                    fprintf(output, "    beqz $t%d, print_false_%d\n", 
+                            printReg, currentPrint);
+                    
+                    /* Print "true" */
+                    fprintf(output, "    la $a0, true_str\n");
+                    fprintf(output, "    li $v0, 4\n");
+                    fprintf(output, "    syscall\n");
+                    fprintf(output, "    j print_bool_end_%d\n", currentPrint);
+                    
+                    /* Print "false" */
+                    fprintf(output, "print_false_%d:\n", currentPrint);
+                    fprintf(output, "    la $a0, false_str\n");
+                    fprintf(output, "    li $v0, 4\n");
+                    fprintf(output, "    syscall\n");
+                    
+                    fprintf(output, "print_bool_end_%d:\n", currentPrint);
+                } else {
+                    int printReg = tempReg > 0 ? tempReg - 1 : 0;
+                    fprintf(output, "    # Print integer (no newline)\n");
+                    fprintf(output, "    move $a0, $t%d\n", printReg);
+                    fprintf(output, "    li $v0, 1\n");
+                    fprintf(output, "    syscall\n");
+                }
             }
+            tempReg = 0;
+            break;
+        }
+
+        case NODE_PRINTLN: {
+            tempReg = 0;
+            
+            // Check if we're printing a string
+            int isString = isExprString(node->data.expr);
+            
+            if (isString) {
+                // For strings, generate the expression to load address
+                genExpr(node->data.expr);
+                int stringReg = tempReg > 0 ? tempReg - 1 : 0;
+                fprintf(output, "    # Print string with newline\n");
+                fprintf(output, "    move $a0, $t%d\n", stringReg);
+                fprintf(output, "    li $v0, 4\n");
+                fprintf(output, "    syscall\n");
+            } else {
+                // Non-string case
+                genExpr(node->data.expr);
+
+                // Use the helper function to determine if expression is float or boolean
+                int isFloat = isExprFloat(node->data.expr);
+                int isBool = isExprBool(node->data.expr);
+
+                if (isFloat) {
+                    fprintf(output, "    # Print float with newline\n");
+                    fprintf(output, "    mov.s $f12, $f0\n");
+                    fprintf(output, "    li $v0, 2\n");
+                    fprintf(output, "    syscall\n");
+                } else if (isBool) {
+                    /* Print "true" or "false" for booleans instead of 1 or 0*/
+                    int printReg = tempReg > 0 ? tempReg - 1 : 0;
+                    fprintf(output, "    # Print boolean with newline\n");
+                    
+                    static int boolPrintCount = 0;
+                    int currentPrint = boolPrintCount++;
+                    
+                    fprintf(output, "    beqz $t%d, println_false_%d\n", 
+                            printReg, currentPrint);
+                    
+                    /* Print "true" */
+                    fprintf(output, "    la $a0, true_str\n");
+                    fprintf(output, "    li $v0, 4\n");
+                    fprintf(output, "    syscall\n");
+                    fprintf(output, "    j println_bool_end_%d\n", currentPrint);
+                    
+                    /* Print "false" */
+                    fprintf(output, "println_false_%d:\n", currentPrint);
+                    fprintf(output, "    la $a0, false_str\n");
+                    fprintf(output, "    li $v0, 4\n");
+                    fprintf(output, "    syscall\n");
+                    
+                    fprintf(output, "println_bool_end_%d:\n", currentPrint);
+                } else {
+                    int printReg = tempReg > 0 ? tempReg - 1 : 0;
+                    fprintf(output, "    # Print integer with newline\n");
+                    fprintf(output, "    move $a0, $t%d\n", printReg);
+                    fprintf(output, "    li $v0, 1\n");
+                    fprintf(output, "    syscall\n");
+                }
+            }
+            /* Print newline */
             fprintf(output, "    # Print newline\n");
             fprintf(output, "    li $v0, 11\n");
             fprintf(output, "    li $a0, 10\n");
@@ -1098,6 +1221,43 @@ void genStmt(ASTNode* node) {
         }
         /* ===== END: WHEN LOOP FEATURE ===== */
         
+        case NODE_WHILE_STMT: {
+            fprintf(output, "\n    # WHILE LOOP - standard while (condition)\n");
+            
+            static int whileCount = 0;
+            int currentWhile = whileCount++;
+            char loopStartLabel[32], loopEndLabel[32];
+            sprintf(loopStartLabel, "while_start_%d", currentWhile);
+            sprintf(loopEndLabel, "while_end_%d", currentWhile);
+            
+            // Loop start label
+            fprintf(output, "%s:\n", loopStartLabel);
+            
+            // Evaluate condition
+            fprintf(output, "    # Evaluate while condition\n");
+            tempReg = 0;
+            genExpr(node->data.while_stmt.condition);
+            int condReg = tempReg > 0 ? tempReg - 1 : 0;
+            
+            // If condition is FALSE, exit loop (beqz = branch if equal to zero)
+            fprintf(output, "    beqz $t%d, %s      # If false, exit loop\n", 
+                    condReg, loopEndLabel);
+            
+            // Execute loop body
+            fprintf(output, "    # While condition is true - execute body\n");
+            genStmt(node->data.while_stmt.block);
+            
+            // Jump back to loop start
+            fprintf(output, "    j %s              # Loop back to start\n", loopStartLabel);
+            
+            // Loop end label
+            fprintf(output, "%s:\n", loopEndLabel);
+            fprintf(output, "    # End of while loop\n");
+            
+            tempReg = 0;
+            break;
+        }
+        
 
         
         default:
@@ -1105,6 +1265,128 @@ void genStmt(ASTNode* node) {
     }
 }
 
+
+// Helper function to collect all string literals from AST
+void collectStrings(ASTNode* node) {
+    if (!node) return;
+    
+    switch(node->type) {
+        case NODE_STRING:
+            addString(node->data.string_literal.value);
+            break;
+        case NODE_BINOP:
+            collectStrings(node->data.binop.left);
+            collectStrings(node->data.binop.right);
+            break;
+        case NODE_UNARYOP:
+            collectStrings(node->data.unaryop.operand);
+            break;
+        case NODE_PRINT:
+            collectStrings(node->data.expr);
+            break;
+        case NODE_PRINTLN:
+            collectStrings(node->data.expr);
+            break;
+        case NODE_ASSIGN:
+            collectStrings(node->data.assign.value);
+            break;
+        case NODE_DECL_ASSIGN:
+            collectStrings(node->data.declAssign.expr);
+            break;
+        case NODE_ARRAY_ASSIGN:
+            collectStrings(node->data.array_assign.index);
+            collectStrings(node->data.array_assign.value);
+            break;
+        case NODE_ARRAY_ACCESS:
+            collectStrings(node->data.array_access.index);
+            break;
+        case NODE_ARRAY_DECL_ASSIGN:
+            collectStrings(node->data.array_decl_assign.initList);
+            break;
+        case NODE_ARRAY_2D_ELEM_ASSIGN:
+            collectStrings(node->data.array_2d_elem_assign.indexX);
+            collectStrings(node->data.array_2d_elem_assign.indexY);
+            collectStrings(node->data.array_2d_elem_assign.value);
+            break;
+        case NODE_IF:
+            collectStrings(node->condition);
+            collectStrings(node->left);
+            collectStrings(node->right);
+            break;
+        case NODE_SWITCH: {
+            collectStrings(node->data.switch_stmt.expr);
+            collectStrings(node->data.switch_stmt.cases);
+            break;
+        }
+        case NODE_CASE:
+            collectStrings(node->data.case_stmt.stmts);
+            break;
+        case NODE_DEFAULT_CASE:
+            collectStrings(node->data.default_case.stmts);
+            break;
+        case NODE_CASE_LIST:
+            collectStrings(node->data.case_list.case_item);
+            collectStrings(node->data.case_list.next);
+            break;
+        case NODE_WHILE_STMT:
+            collectStrings(node->data.while_stmt.condition);
+            collectStrings(node->data.while_stmt.block);
+            break;
+        case NODE_WHEN_STMT:
+            collectStrings(node->data.when_stmt.primaryCond);
+            collectStrings(node->data.when_stmt.primaryBlock);
+            collectStrings(node->data.when_stmt.orBranches);
+            collectStrings(node->data.when_stmt.elseBlock);
+            break;
+        case NODE_WHEN_OR_LIST:
+            if (node->data.when_or_list.branch) {
+                collectStrings(node->data.when_or_list.branch);
+            }
+            if (node->data.when_or_list.next) {
+                collectStrings(node->data.when_or_list.next);
+            }
+            break;
+        case NODE_WHEN_OR_BRANCH:
+            collectStrings(node->data.when_or_branch.condition);
+            collectStrings(node->data.when_or_branch.block);
+            break;
+        case NODE_RETURN:
+            collectStrings(node->data.ret.value);
+            break;
+        case NODE_FUNC_CALL: {
+            ASTNode* arg = node->data.func_call.args;
+            while (arg) {
+                if (arg->type == NODE_ARG_LIST) {
+                    collectStrings(arg->data.arg_list.expr);
+                    arg = arg->data.arg_list.next;
+                } else {
+                    collectStrings(arg);
+                    break;
+                }
+            }
+            break;
+        }
+        case NODE_STMT_LIST:
+            collectStrings(node->data.stmtlist.stmt);
+            collectStrings(node->data.stmtlist.next);
+            break;
+        case NODE_BLOCK:
+            collectStrings(node->data.block.stmts);
+            break;
+        case NODE_EXPR_LIST:
+            collectStrings(node->data.list.expr);
+            collectStrings(node->data.list.next);
+            break;
+        case NODE_FUNC_DECL:
+            collectStrings(node->data.func_decl.body);
+            break;
+        case NODE_BREAK_WHEN:
+            collectStrings(node->data.break_when.expr);
+            break;
+        default:
+            break;
+    }
+}
 
 // Helper function to collect all global function names
 void collectGlobalFunctions(ASTNode* node, char** funcNames, int* funcCount) {
@@ -1138,9 +1420,22 @@ void generateMIPS(ASTNode* root, const char* filename) {
 
     initSymTab();
 
+    /* ===== NEW: STRING LITERAL SUPPORT ===== */
+    /* Pre-pass: collect all string literals before code generation */
+    collectStrings(root);
+    /* ===== END: STRING LITERAL SUPPORT ===== */
+
     fprintf(output, ".data\n");
     fprintf(output, "true_str: .asciiz \"true\"\n");
     fprintf(output, "false_str: .asciiz \"false\"\n");
+    
+    /* ===== NEW: STRING LITERAL SUPPORT ===== */
+    /* Output all string literals */
+    for (int i = 0; i < stringCount; i++) {
+        fprintf(output, "str_%d: .asciiz \"%s\"\n", i, stringTable[i].value);
+    }
+    /* ===== END: STRING LITERAL SUPPORT ===== */
+    
     fprintf(output, "\n.text\n");
 
     // Collect all global function names
