@@ -14,10 +14,24 @@
 extern int yylex();      /* Get next token from scanner */
 extern int yyparse();    /* Parse the entire input */
 extern FILE* yyin;       /* Input file handle */
+extern int yylineno;     /* Current line number */
+extern char* yytext;     /* Current token text */
 
 void yyerror(const char* s);  /* Error handling function */
 ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
+
+/* Debug flag - set to 1 for verbose parsing output */
+int debug_parser = 1;
+
+void debug_print(const char* rule, const char* action) {
+    if (debug_parser) {
+        fprintf(stderr, "[Parser] Line %d: %s - %s\n", yylineno, rule, action);
+    }
+}
 %}
+
+/* Use GLR parser to handle shift/reduce conflicts */
+%glr-parser
 
 /* ============================================================================
    SEMANTIC VALUES UNION
@@ -76,6 +90,7 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 %type <node> func_decl param_list param block
 %type <node> print_stmt return_stmt func_call arg_list
 %type <node> expr arrayExpr
+%type <str> type
 
 /* ===== NEW: WHEN LOOP FEATURE ===== */
 %type <node> when_stmt when_or_list when_or_branch break_when_stmt
@@ -102,6 +117,7 @@ ASTNode* root = NULL;          /* Root of the Abstract Syntax Tree */
 program:
     stmt_list { 
         root = $1;
+        debug_print("program", "completed successfully");
     }
     ;
 
@@ -230,6 +246,16 @@ declAssign:
         $$ = createArrayDeclAssign("float", $2, 0, $7);
         free($2);
     }
+    /* int[] arr = {...}; syntax */
+    | INT '[' ']' ID '=' '{' arrayExpr '}' ';' {
+        $$ = createArrayDeclAssign("int", $4, 0, $7);
+        free($4);
+    }
+    /* float[] arr = {...}; syntax */
+    | FLOAT '[' ']' ID '=' '{' arrayExpr '}' ';' {
+        $$ = createArrayDeclAssign("float", $4, 0, $7);
+        free($4);
+    }
     ;
 
 /* Assignment statements */
@@ -255,25 +281,27 @@ assign:
    FUNCTION DECLARATIONS AND CALLS
    ============================================================================ */
 
+/* Generic type rule that handles all type variations */
+type:
+    INT { $$ = strdup("int"); }
+    | FLOAT { $$ = strdup("float"); }
+    | BOOL { $$ = strdup("bool"); }
+    | VOID { $$ = strdup("void"); }
+    | INT '[' ']' { $$ = strdup("int[]"); }
+    | INT '[' ']' '[' ']' { $$ = strdup("int[][]"); }
+    | FLOAT '[' ']' { $$ = strdup("float[]"); }
+    | FLOAT '[' ']' '[' ']' { $$ = strdup("float[][]"); }
+    ;
+
 func_decl:
-    INT ID '(' param_list ')' block {
-        $$ = createFuncDecl("int", $2, $4, $6);
+    type ID '(' param_list ')' block {
+        $$ = createFuncDecl($1, $2, $4, $6);
+        free($1);
         free($2);
     }
-    | INT ID '(' ')' block {
-        $$ = createFuncDecl("int", $2, NULL, $5);
-        free($2);
-    }
-    | FLOAT ID '(' param_list ')' block {
-        $$ = createFuncDecl("float", $2, $4, $6);
-        free($2);
-    }
-    | FLOAT ID '(' ')' block {
-        $$ = createFuncDecl("float", $2, NULL, $5);
-        free($2);
-    }
-    | VOID ID '(' ')' block {
-        $$ = createFuncDecl("void", $2, NULL, $5);
+    | type ID '(' ')' block {
+        $$ = createFuncDecl($1, $2, NULL, $5);
+        free($1);
         free($2);
     }
     ;
@@ -288,12 +316,18 @@ param_list:
     ;
 
 param:
-    INT ID {
-        $$ = createParam("int", $2);
+    type ID {
+        $$ = createParam($1, $2);
+        free($1);
         free($2);
     }
-    | FLOAT ID {
-        $$ = createParam("float", $2);
+    | type ID '[' ']' {
+        /* Handle array parameter syntax: int arr[] */
+        char* arrayType = malloc(strlen($1) + 3);
+        sprintf(arrayType, "%s[]", $1);
+        $$ = createParam(arrayType, $2);
+        free(arrayType);
+        free($1);
         free($2);
     }
     ;
@@ -552,7 +586,28 @@ arrayExpr:
    ============================================================================ */
 
 void yyerror(const char* s) {
-    fprintf(stderr, "Syntax Error: %s\n", s);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "╔════════════════════════════════════════════════════════════╗\n");
+    fprintf(stderr, "║                    SYNTAX ERROR DETAILS                    ║\n");
+    fprintf(stderr, "╚════════════════════════════════════════════════════════════╝\n");
+    fprintf(stderr, "\nError Message: %s\n", s);
+    fprintf(stderr, "Line Number: %d\n", yylineno);
+    fprintf(stderr, "Current Token: %s\n", yytext);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Possible Issues:\n");
+    fprintf(stderr, "  • Missing semicolon at end of statement\n");
+    fprintf(stderr, "  • Mismatched parentheses or braces\n");
+    fprintf(stderr, "  • Invalid token or syntax\n");
+    fprintf(stderr, "  • Wrong function/variable type declaration\n");
+    fprintf(stderr, "  • Array syntax error (check [] brackets)\n");
+    fprintf(stderr, "  • Function parameter or return type issue\n");
+    fprintf(stderr, "\nCommon patterns that WORK:\n");
+    fprintf(stderr, "  • int x = 5;                          (variable declaration)\n");
+    fprintf(stderr, "  • int[] arr = [1, 2, 3];             (array initialization)\n");
+    fprintf(stderr, "  • int myFunc(int x, float y) { }      (function with types)\n");
+    fprintf(stderr, "  • int[] func(int[] arr) { }           (array return type)\n");
+    fprintf(stderr, "  • println(x);                         (print with newline)\n");
+    fprintf(stderr, "\n");
 }
 
 /* ============================================================================

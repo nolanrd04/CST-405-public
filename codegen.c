@@ -10,6 +10,7 @@ extern TACList optimizedList;
 FILE* output;
 int tempReg = 0;
 char* currentFunctionType = NULL;
+int currentFunctionPrologueSize = 0;  // Track how much space was allocated in prologue
 
 /* ===== NEW: WHEN LOOP FEATURE ===== */
 /* Stack for tracking nested when loop end labels */
@@ -154,8 +155,13 @@ void genExpr(ASTNode* node);
 
 
 void genExpr(ASTNode* node) {
-    if (!node) return;
-    
+    if (!node) {
+        fprintf(stderr, "[DEBUG] genExpr: NULL node\n");
+        return;
+    }
+
+    fprintf(stderr, "[DEBUG] genExpr: Processing node type %d\n", node->type);
+
     switch(node->type) {
         case NODE_NUM:
             if(node->data.num.is_float) {
@@ -320,16 +326,23 @@ void genExpr(ASTNode* node) {
                 exit(1);
             }
 
+            // Check if this is an array parameter (passed by reference)
+            char* varType = getVarType(node->data.array_access.name);
+            if (varType && strstr(varType, "[]")) {
+                // Array parameter: baseOffset contains a pointer, dereference it
+                fprintf(output, "    lw    $t%d, %d($sp)   # load pointer to array %s\n",
+                        baseReg, baseOffset, node->data.array_access.name);
+            } else {
+                // Regular array: calculate address from base offset
+                fprintf(output, "    addiu $t%d, $sp, %d   # base of %s\n",
+                        baseReg, baseOffset, node->data.array_access.name);
+            }
+
             fprintf(output, "    sll  $t%d, $t%d, 2      # idx * 4\n", idxReg, idxReg);
-            fprintf(output, "    addiu $t%d, $sp, %d   # base of %s\n",
-                    baseReg, baseOffset, node->data.array_access.name);
             fprintf(output, "    addu  $t%d, $t%d, $t%d  # element address\n",
                     addrReg, baseReg, idxReg);
-            fprintf(output, "    lw    $t%d, 0($t%d)     # load array element\n",
-                    resReg, addrReg);
 
-            char* type = getVarType(node->data.array_access.name);
-            if (type && strcmp(type, "float") == 0) {
+            if (varType && strcmp(varType, "float") == 0 || (varType && strstr(varType, "float[]"))) {
                 fprintf(output, "    lwc1 $f0, 0($t%d)     # load float value\n", addrReg);
                 tempReg = 0;
             } else {
@@ -357,14 +370,23 @@ void genExpr(ASTNode* node) {
                 exit(1);
             }
 
+            // Check if this is an array parameter (passed by reference)
+            char* varType = getVarType(node->data.array_assign.name);
+            if (varType && strstr(varType, "[]")) {
+                // Array parameter: baseOffset contains a pointer, dereference it
+                fprintf(output, "    lw    $t%d, %d($sp)   # load pointer to array %s\n",
+                        baseReg, baseOffset, node->data.array_assign.name);
+            } else {
+                // Regular array: calculate address from base offset
+                fprintf(output, "    addiu $t%d, $sp, %d   # base of %s\n",
+                        baseReg, baseOffset, node->data.array_assign.name);
+            }
+
             fprintf(output, "    sll  $t%d, $t%d, 2      # idx * 4\n", idxReg, idxReg);
-            fprintf(output, "    addiu $t%d, $sp, %d   # base of %s\n",
-                    baseReg, baseOffset, node->data.array_assign.name);
             fprintf(output, "    addu  $t%d, $t%d, $t%d  # element address\n",
                     addrReg, baseReg, idxReg);
 
-            char* type = getVarType(node->data.array_assign.name);
-            if (type && strcmp(type, "float") == 0) {
+            if (varType && (strcmp(varType, "float") == 0 || strstr(varType, "float[]"))) {
                 fprintf(output, "    swc1 $f0, 0($t%d)     # store float value\n", addrReg);
             } else {
                 fprintf(output, "    sw    $t%d, 0($t%d)     # store int value\n", valReg, addrReg);
@@ -377,30 +399,30 @@ void genExpr(ASTNode* node) {
         case NODE_ARRAY_2D_ACCESS: {
             int sizeY = getArray2DSizeY(node->data.array_2d_access.name);
             if (sizeY == -1) {
-                fprintf(stderr, "Error: Array %s not found or not 2D\n", 
+                fprintf(stderr, "Error: Array %s not found or not 2D\n",
                         node->data.array_2d_access.name);
                 exit(1);
             }
-    
+
             genExpr(node->data.array_2d_access.indexX);
             int idxXReg = tempReg - 1;
             genExpr(node->data.array_2d_access.indexY);
             int idxYReg = tempReg - 1;
-    
+
             int baseOffset = getVarOffset(node->data.array_2d_access.name);
             if (baseOffset == -1) {
-                fprintf(stderr, "Error: Array %s not declared\n", 
+                fprintf(stderr, "Error: Array %s not declared\n",
                         node->data.array_2d_access.name);
                 exit(1);
             }
-    
+
             int sizeYReg = getNextTemp();
             int tempMultReg = getNextTemp();
             int offsetReg = getNextTemp();
             int baseReg = getNextTemp();
             int addrReg = getNextTemp();
             int resultReg = getNextTemp();
-    
+
             fprintf(output, "    # 2D array access: %s[i][j]\n", node->data.array_2d_access.name);
             fprintf(output, "    li $t%d, %d           # sizeY = %d\n", sizeYReg, sizeY, sizeY);
             fprintf(output, "    mult $t%d, $t%d       # multiply indexX * sizeY\n", idxXReg, sizeYReg);
@@ -409,7 +431,7 @@ void genExpr(ASTNode* node) {
             fprintf(output, "    sll $t%d, $t%d, 2     # multiply by 4\n", offsetReg, offsetReg);
             fprintf(output, "    addiu $t%d, $sp, %d   # base address\n", baseReg, baseOffset);
             fprintf(output, "    addu $t%d, $t%d, $t%d # final address\n", addrReg, baseReg, offsetReg);
-    
+
             char* type = getVarType(node->data.array_2d_access.name);
             if (type && strcmp(type, "float") == 0) {
                 fprintf(output, "    lwc1 $f0, 0($t%d)     # load float value\n", addrReg);
@@ -417,46 +439,109 @@ void genExpr(ASTNode* node) {
             } else {
                 fprintf(output, "    lw    $t%d, 0($t%d)     # load int value\n", resultReg, addrReg);
             }
-    
+
             tempReg = resultReg + 1;
             break;
         }
 
         case NODE_FUNC_CALL: {
-            fprintf(output, "    # Call function: %s\n", node->data.func_call.name);
+            fprintf(output, "    # Call function: %s (from genExpr)\n", node->data.func_call.name);
             ASTNode* arg = node->data.func_call.args;
             int argNum = 0;
 
+            // Count arguments first
+            int totalArgs = 0;
+            ASTNode* countArg = arg;
+            while (countArg) {
+                if (countArg->type == NODE_ARG_LIST) {
+                    totalArgs++;
+                    countArg = countArg->data.arg_list.next;
+                } else {
+                    totalArgs++;
+                    break;
+                }
+            }
+
+            // FIX: Evaluate all arguments BEFORE allocating stack space
+            // Use unique temp registers or push to stack immediately to avoid overwrites
+            int savedRegs[10];  // Track which register holds each argument
+            int savedIsFloat[10];
+
+            argNum = 0;
+            arg = node->data.func_call.args;
+            int nextTempReg = 0;  // Track available temp registers
+
             while (arg) {
                 if (arg->type == NODE_ARG_LIST) {
-                    tempReg = 0;
-                    genExpr(arg->data.arg_list.expr);
+                    int argIndex = totalArgs - 1 - argNum;
 
-                    if(arg->data.arg_list.expr->type == NODE_NUM && arg->data.arg_list.expr->data.num.is_float) {
-                        fprintf(output, "    swc1 $f0, %d($sp)\n", 204 + (argNum * 4));
+                    // Check if this argument is an array variable
+                    if (arg->data.arg_list.expr->type == NODE_VAR &&
+                        isArrayVar(arg->data.arg_list.expr->data.name)) {
+                        // Pass array by reference (address)
+                        int offset = getVarOffset(arg->data.arg_list.expr->data.name);
+                        int regToUse = nextTempReg++;
+                        fprintf(output, "    addi $t%d, $sp, %d  # Load array address for arg %d\n", regToUse, offset, argIndex);
+                        savedRegs[argIndex] = regToUse;
+                        savedIsFloat[argIndex] = 0;
                     } else {
-                        int resultReg = tempReg > 0 ? tempReg - 1 : 0;
-                        fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, 204 + (argNum * 4));
+                        // Regular scalar argument - evaluate into specific register
+                        tempReg = nextTempReg;
+                        genExpr(arg->data.arg_list.expr);
+                        savedRegs[argIndex] = nextTempReg;
+                        savedIsFloat[argIndex] = (arg->data.arg_list.expr->type == NODE_NUM && arg->data.arg_list.expr->data.num.is_float);
+                        nextTempReg++;
+                        if (nextTempReg > 7) nextTempReg = 7;  // Clamp to available temp regs
                     }
 
                     argNum++;
                     arg = arg->data.arg_list.next;
                 } else {
-                    tempReg = 0;
-                    genExpr(arg);
+                    // Last argument (non-list node)
+                    int argIndex = 0;
 
-                    if (arg->type == NODE_NUM && arg->data.num.is_float) {
-                        fprintf(output, "    swc1 $f0, %d($sp)\n", 204 + (argNum * 4));
+                    // Check if this argument is an array variable
+                    if (arg->type == NODE_VAR && isArrayVar(arg->data.name)) {
+                        // Pass array by reference (address)
+                        int offset = getVarOffset(arg->data.name);
+                        int regToUse = nextTempReg++;
+                        fprintf(output, "    addi $t%d, $sp, %d  # Load array address for arg %d\n", regToUse, offset, argIndex);
+                        savedRegs[argIndex] = regToUse;
+                        savedIsFloat[argIndex] = 0;
                     } else {
-                        int resultReg = tempReg > 0 ? tempReg - 1 : 0;
-                        fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, 204 + (argNum * 4));
+                        // Regular scalar argument
+                        tempReg = nextTempReg;
+                        genExpr(arg);
+                        savedRegs[argIndex] = nextTempReg;
+                        savedIsFloat[argIndex] = (arg->type == NODE_NUM && arg->data.num.is_float);
                     }
                     break;
                 }
             }
 
+            // NOW allocate space for arguments on stack
+            if (totalArgs > 0) {
+                fprintf(output, "    addi $sp, $sp, -%d  # Allocate space for %d arguments\n", totalArgs * 4, totalArgs);
+            }
+
+            // Store all evaluated arguments to their stack locations
+            for (int i = 0; i < totalArgs; i++) {
+                int storeOffset = i * 4;
+                if (savedIsFloat[i]) {
+                    fprintf(output, "    swc1 $f0, %d($sp)  # Store float argument %d\n", storeOffset, i);
+                } else {
+                    fprintf(output, "    sw $t%d, %d($sp)  # Store argument %d\n", savedRegs[i], storeOffset, i);
+                }
+            }
+
             fprintf(output, "    jal %s\n", node->data.func_call.name);
             fprintf(output, "    move $t0, $v0\n");
+
+            // Deallocate argument space
+            if (totalArgs > 0) {
+                fprintf(output, "    addi $sp, $sp, %d  # Deallocate argument space\n", totalArgs * 4);
+            }
+
             tempReg = 0;
             break;
         }
@@ -467,17 +552,34 @@ void genExpr(ASTNode* node) {
 }
 
 void genStmt(ASTNode* node) {
-    if (!node) return;
-    
+    if (!node) {
+        fprintf(stderr, "[DEBUG] genStmt: NULL node\n");
+        return;
+    }
+
+    fprintf(stderr, "[DEBUG] genStmt: Processing node type %d\n", node->type);
+
     switch(node->type) {
         case NODE_DECL: {
-            int offset = addVar(node->data.decl.varName, node->data.decl.varType);
-            if (offset == -1) {
-                fprintf(stderr, "Error: Variable %s already declared\n", node->data.name);
-                exit(1);
+            fprintf(stderr, "[DEBUG] NODE_DECL: var=%s, scope=%d\n",
+                    node->data.decl.varName, getCurrentScope());
+
+            // Check if this is a global declaration (scope 0)
+            if (getCurrentScope() == 0) {
+                // Global variables: skip - they're not allocated on the stack
+                fprintf(stderr, "[DEBUG] Skipping global variable: %s (globals not supported on stack)\n",
+                        node->data.decl.varName);
+                // Don't add to symbol table - globals aren't tracked in our simple implementation
+            } else {
+                // Local variable: allocate on stack
+                int offset = addVar(node->data.decl.varName, node->data.decl.varType);
+                if (offset == -1) {
+                    fprintf(stderr, "Error: Variable %s already declared\n", node->data.decl.varName);
+                    exit(1);
+                }
+                fprintf(output, "    # Declared %s at scope %d, offset %d\n",
+                        node->data.decl.varName, getCurrentScope(), offset);
             }
-            fprintf(output, "    # Declared %s at scope %d, offset %d\n", 
-                    node->data.decl.varName, getCurrentScope(), offset);
             break;
         }
 
@@ -691,13 +793,30 @@ void genStmt(ASTNode* node) {
             break;
             
         case NODE_ARRAY_DECL: {
-            int offset = addArrayVar(node->data.array_decl.name, node->data.array_decl.size, node->data.array_decl.type);
-            if (offset == -1) {
-                fprintf(stderr, "Error: Array %s already declared\n", node->data.array_decl.name);
-                exit(1);
+            fprintf(stderr, "[DEBUG] NODE_ARRAY_DECL: array=%s, size=%d, type=%s, scope=%d\n",
+                    node->data.array_decl.name,
+                    node->data.array_decl.size,
+                    node->data.array_decl.type ? node->data.array_decl.type : "NULL",
+                    getCurrentScope());
+
+            // Check if this is a global declaration (scope 0)
+            if (getCurrentScope() == 0) {
+                // Global arrays: skip - they're not allocated on the stack
+                fprintf(stderr, "[DEBUG] Skipping global array: %s (globals not supported on stack)\n",
+                        node->data.array_decl.name);
+                // Don't add to symbol table - globals aren't tracked in our simple implementation
+            } else {
+                // Local array: allocate on stack
+                fprintf(stderr, "[DEBUG] About to call addArrayVar...\n");
+                int offset = addArrayVar(node->data.array_decl.name, node->data.array_decl.size, node->data.array_decl.type);
+                fprintf(stderr, "[DEBUG] addArrayVar returned offset: %d\n", offset);
+                if (offset == -1) {
+                    fprintf(stderr, "Error: Array %s already declared\n", node->data.array_decl.name);
+                    exit(1);
+                }
+                fprintf(output, "    # Declared array %s of size %d at scope %d, offset %d\n",
+                        node->data.array_decl.name, node->data.array_decl.size, getCurrentScope(), offset);
             }
-            fprintf(output, "    # Declared array %s of size %d at scope %d, offset %d\n", 
-                    node->data.array_decl.name, node->data.array_decl.size, getCurrentScope(), offset);
             break;
         }
 
@@ -720,9 +839,19 @@ void genStmt(ASTNode* node) {
                 exit(1);
             }
 
+            // Check if this is an array parameter (passed by reference)
+            char* varType = getVarType(node->data.array_assign.name);
+            if (varType && strstr(varType, "[]")) {
+                // Array parameter: baseOffset contains a pointer, dereference it
+                fprintf(output, "    lw    $t%d, %d($sp)   # load pointer to array %s\n",
+                        baseReg, baseOffset, node->data.array_assign.name);
+            } else {
+                // Regular array: calculate address from base offset
+                fprintf(output, "    addiu $t%d, $sp, %d   # base of %s\n",
+                        baseReg, baseOffset, node->data.array_assign.name);
+            }
+
             fprintf(output, "    sll  $t%d, $t%d, 2      # idx * 4\n", idxReg, idxReg);
-            fprintf(output, "    addiu $t%d, $sp, %d   # base of %s\n",
-                    baseReg, baseOffset, node->data.array_assign.name);
             fprintf(output, "    addu  $t%d, $t%d, $t%d  # element address\n",
                     addrReg, baseReg, idxReg);
             char* type = getVarType(node->data.array_assign.name);
@@ -844,69 +973,118 @@ void genStmt(ASTNode* node) {
         }
 
         case NODE_FUNC_DECL: {
+            fprintf(stderr, "[DEBUG] Processing function: %s\n", node->data.func_decl.name);
             fprintf(output, "\n%s:\n", node->data.func_decl.name);
-            fprintf(output, "    # Function: %s (Scope Level: %d)\n", 
+            fprintf(output, "    # Function: %s (Scope Level: %d)\n",
                     node->data.func_decl.name, getCurrentScope() + 1);
-            
+
             // ✅ FIXED: Enter new scope instead of resetting symbol table
             enterScope();
 
             addVar("$ra_slot", "int");
 
+            // CALLING CONVENTION:
+            // Parameters are passed in caller's stack frame at: caller_sp + 4 + (paramNum * 4)
+            // After prologue, we allocate local variable space below $ra
+
+            currentFunctionPrologueSize = 0;  // Reset prologue size tracking
+
+            // FIX: Use smaller, more reasonable stack allocation
+            // Main needs more space for its local arrays, but other functions should use minimal space
             if (strcmp(node->data.func_decl.name, "main") == 0) {
-                fprintf(output, "    addi $sp, $sp, -400\n");
+                fprintf(output, "    addi $sp, $sp, -200\n");  // Reduced from 400
+                currentFunctionPrologueSize += 200;
+            } else {
+                // For other functions, allocate minimal space (just 20 bytes for a few local vars)
+                // This prevents stack overflow in recursive functions
+                fprintf(output, "    addi $sp, $sp, -20\n");  // Reduced from 100
+                currentFunctionPrologueSize += 20;
             }
-    
-            fprintf(output, "    addi $sp, $sp, -100\n");
+
+            fprintf(output, "    addi $sp, $sp, -4\n");
             fprintf(output, "    sw $ra, 0($sp)\n");
-    
+            currentFunctionPrologueSize += 4;
+
             // Load parameters
+            // Parameters are at: $sp + currentFunctionPrologueSize + (paramNum * 4)
+            // This accounts for the space allocated in the prologue
             ASTNode* param = node->data.func_decl.params;
             int paramNum = 0;
-    
-            while (param) {
-                if (param->type == NODE_PARAM_LIST) {
-                    if (param->data.param_list.param->type == NODE_PARAM) {
-                        char* paramName = param->data.param_list.param->data.param.name;
-                        char* paramType = param->data.param_list.param->data.param.type;
-                        int offset = addVar(paramName, paramType);
-                
-                        if (strcmp(paramType, "float") == 0) {
-                            fprintf(output, "    lwc1 $f0, %d($sp)\n", 300 + 4 + (paramNum * 4));
-                            fprintf(output, "    swc1 $f0, %d($sp)  # Store param %s (float) at scope %d\n", 
-                                    offset, paramName, getCurrentScope());
-                        } else {
-                            fprintf(output, "    lw $t0, %d($sp)\n", 300 + 4 + (paramNum * 4));
-                            fprintf(output, "    sw $t0, %d($sp)  # Store param %s (int) at scope %d\n", 
-                                    offset, paramName, getCurrentScope());
-                        }
-                
-                        paramNum++;
-                    }
-                    param = param->data.param_list.next;
-                } else if (param->type == NODE_PARAM) {
-                    char* paramName = param->data.param.name;
-                    char* paramType = param->data.param.type;
-                    int offset = addVar(paramName, paramType);
-            
-                    if (strcmp(paramType, "float") == 0) {
-                        fprintf(output, "    lwc1 $f0, %d($sp)\n", 300 + 4 + (paramNum * 4));
-                        fprintf(output, "    swc1 $f0, %d($sp)  # Store param %s (float) at scope %d\n", 
-                                offset, paramName, getCurrentScope());
-                    } else {
-                        fprintf(output, "    lw $t0, %d($sp)\n", 300 + 4 + (paramNum * 4));
-                        fprintf(output, "    sw $t0, %d($sp)  # Store param %s (int) at scope %d\n", 
-                                offset, paramName, getCurrentScope());
-                    }
-                    break;
-                } else {
-                    break;
+
+            fprintf(stderr, "[DEBUG] Loading parameters for function %s\n", node->data.func_decl.name);
+
+            // First, flatten the parameter list into an array (using a helper recursive function)
+            ASTNode* paramList[20];  // Max 20 params
+            int totalParams = 0;
+
+            // Recursive helper to extract all NODE_PARAM nodes from the nested structure
+            void flattenParams(ASTNode* p) {
+                if (!p) return;
+                fprintf(stderr, "[DEBUG] flattenParams: node type %d\n", p->type);
+
+                if (p->type == NODE_PARAM) {
+                    // Base case: found an actual parameter
+                    paramList[totalParams++] = p;
+                    fprintf(stderr, "[DEBUG] Added param, total: %d\n", totalParams);
+                } else if (p->type == NODE_PARAM_LIST) {
+                    // Recursive case: traverse the list
+                    flattenParams(p->data.param_list.param);  // Process the param field (could be another list or a param)
+                    flattenParams(p->data.param_list.next);   // Process the next in the list
                 }
             }
-    
+
+            flattenParams(param);
+            fprintf(stderr, "[DEBUG] Found %d parameters\n", totalParams);
+
+            // Process parameters in order
+            for (int i = 0; i < totalParams; i++) {
+                ASTNode* paramNode = paramList[i];
+                fprintf(stderr, "[DEBUG] Processing param %d\n", i);
+
+                if (paramNode->type == NODE_PARAM) {
+                    char* paramName = paramNode->data.param.name;
+                    char* paramType = paramNode->data.param.type;
+                    fprintf(stderr, "[DEBUG] Processing parameter: %s (type: %s)\n", paramName, paramType);
+                    int offset = addVar(paramName, paramType);
+
+                    // Parameters are stored by caller, but after prologue we've moved $sp
+                    // So parameters are now at: $sp + currentFunctionPrologueSize + (i * 4)
+                    int paramLocation = currentFunctionPrologueSize + (i * 4);
+
+                    // Check if parameter is an array type
+                    if (strstr(paramType, "[]")) {
+                        // Array parameter: load pointer (address) from caller's frame
+                        fprintf(output, "    lw $t0, %d($sp)  # Load array address for param %s\n",
+                                paramLocation, paramName);
+                        // Store the pointer in the variable's location for access later
+                        fprintf(output, "    sw $t0, %d($sp)  # Store array pointer at local offset %d\n",
+                                offset, offset);
+                    } else if (strcmp(paramType, "float") == 0) {
+                        fprintf(output, "    lwc1 $f0, %d($sp)  # Load float param\n", paramLocation);
+                        fprintf(output, "    swc1 $f0, %d($sp)  # Store param %s (float) at local offset %d\n",
+                                offset, paramName, offset);
+                    } else {
+                        fprintf(output, "    lw $t0, %d($sp)  # Load int param\n", paramLocation);
+                        fprintf(output, "    sw $t0, %d($sp)  # Store param %s (int) at local offset %d\n",
+                                offset, paramName, offset);
+                    }
+                } else {
+                    fprintf(stderr, "[DEBUG] ERROR: paramNode type is not NODE_PARAM: %d\n", paramNode->type);
+                }
+            }
+
             // Generate function body
+            fprintf(stderr, "[DEBUG] Generating function body for %s\n", node->data.func_decl.name);
             genStmt(node->data.func_decl.body);
-            
+            fprintf(stderr, "[DEBUG] Finished generating function body for %s\n", node->data.func_decl.name);
+
+            // Generate implicit return for functions that don't have explicit return
+            // (This handles void functions and functions that fall through)
+            fprintf(output, "    # Implicit return from function\n");
+            fprintf(output, "    lw $ra, 0($sp)\n");
+            fprintf(output, "    addi $sp, $sp, %d\n", currentFunctionPrologueSize);  // Deallocate ALL prologue space
+            fprintf(output, "    jr $ra\n");
+
             // ✅ FIXED: Exit scope after function ends
             exitScope();
             break;
@@ -930,35 +1108,109 @@ void genStmt(ASTNode* node) {
                 fprintf(output, "    move $v0, $t0\n");  // Integer return value
             }
             fprintf(output, "    lw $ra, 0($sp)\n");
-            fprintf(output, "    addi $sp, $sp, 100\n");
+            fprintf(output, "    addi $sp, $sp, %d\n", currentFunctionPrologueSize);  // Deallocate ALL prologue space
             fprintf(output, "    jr $ra\n");
             break;
         }
         
         case NODE_FUNC_CALL: {
-            fprintf(output, "    # Call function: %s\n", node->data.func_call.name);
+            fprintf(output, "    # Call function: %s (from genStmt)\n", node->data.func_call.name);
             ASTNode* arg = node->data.func_call.args;
             int argNum = 0;
 
+            // Count arguments first
+            int totalArgs = 0;
+            ASTNode* countArg = arg;
+            while (countArg) {
+                if (countArg->type == NODE_ARG_LIST) {
+                    totalArgs++;
+                    countArg = countArg->data.arg_list.next;
+                } else {
+                    totalArgs++;
+                    break;
+                }
+            }
+
+            // FIX: Evaluate all arguments BEFORE allocating stack space
+            // Use unique temp registers or push to stack immediately to avoid overwrites
+            int savedRegs[10];  // Track which register holds each argument
+            int savedIsFloat[10];
+
+            argNum = 0;
+            arg = node->data.func_call.args;
+            int nextTempReg = 0;  // Track available temp registers
+
             while (arg) {
                 if (arg->type == NODE_ARG_LIST) {
-                    tempReg = 0;
-                    genExpr(arg->data.arg_list.expr);
-                    int resultReg = tempReg > 0 ? tempReg - 1 : 0;
-                    fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, 204 + (argNum * 4));
+                    int argIndex = totalArgs - 1 - argNum;
+
+                    // Check if this argument is an array variable
+                    if (arg->data.arg_list.expr->type == NODE_VAR &&
+                        isArrayVar(arg->data.arg_list.expr->data.name)) {
+                        // Pass array by reference (address)
+                        int offset = getVarOffset(arg->data.arg_list.expr->data.name);
+                        int regToUse = nextTempReg++;
+                        fprintf(output, "    addi $t%d, $sp, %d  # Load array address for arg %d\n", regToUse, offset, argIndex);
+                        savedRegs[argIndex] = regToUse;
+                        savedIsFloat[argIndex] = 0;
+                    } else {
+                        // Regular scalar argument - evaluate into specific register
+                        tempReg = nextTempReg;
+                        genExpr(arg->data.arg_list.expr);
+                        savedRegs[argIndex] = nextTempReg;
+                        savedIsFloat[argIndex] = (arg->data.arg_list.expr->type == NODE_NUM && arg->data.arg_list.expr->data.num.is_float);
+                        nextTempReg++;
+                        if (nextTempReg > 7) nextTempReg = 7;  // Clamp to available temp regs
+                    }
+
                     argNum++;
                     arg = arg->data.arg_list.next;
                 } else {
-                    tempReg = 0;
-                    genExpr(arg);
-                    int resultReg = tempReg > 0 ? tempReg - 1 : 0;
-                    fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, 204 + (argNum * 4));
+                    // Last argument (non-list node)
+                    int argIndex = 0;
+
+                    // Check if this argument is an array variable
+                    if (arg->type == NODE_VAR && isArrayVar(arg->data.name)) {
+                        // Pass array by reference (address)
+                        int offset = getVarOffset(arg->data.name);
+                        int regToUse = nextTempReg++;
+                        fprintf(output, "    addi $t%d, $sp, %d  # Load array address for arg %d\n", regToUse, offset, argIndex);
+                        savedRegs[argIndex] = regToUse;
+                        savedIsFloat[argIndex] = 0;
+                    } else {
+                        // Regular scalar argument
+                        tempReg = nextTempReg;
+                        genExpr(arg);
+                        savedRegs[argIndex] = nextTempReg;
+                        savedIsFloat[argIndex] = (arg->type == NODE_NUM && arg->data.num.is_float);
+                    }
                     break;
+                }
+            }
+
+            // NOW allocate space for arguments on stack
+            if (totalArgs > 0) {
+                fprintf(output, "    addi $sp, $sp, -%d  # Allocate space for %d arguments\n", totalArgs * 4, totalArgs);
+            }
+
+            // Store all evaluated arguments to their stack locations
+            for (int i = 0; i < totalArgs; i++) {
+                int storeOffset = i * 4;
+                if (savedIsFloat[i]) {
+                    fprintf(output, "    swc1 $f0, %d($sp)  # Store float argument %d\n", storeOffset, i);
+                } else {
+                    fprintf(output, "    sw $t%d, %d($sp)  # Store argument %d\n", savedRegs[i], storeOffset, i);
                 }
             }
 
             fprintf(output, "    jal %s\n", node->data.func_call.name);
             fprintf(output, "    move $t0, $v0\n");
+
+            // Deallocate argument space
+            if (totalArgs > 0) {
+                fprintf(output, "    addi $sp, $sp, %d  # Deallocate argument space\n", totalArgs * 4);
+            }
+
             tempReg = 0;
             break;
         }
@@ -1412,19 +1664,25 @@ void collectGlobalFunctions(ASTNode* node, char** funcNames, int* funcCount) {
 }
 
 void generateMIPS(ASTNode* root, const char* filename) {
+    fprintf(stderr, "[DEBUG] ===== Starting MIPS Code Generation =====\n");
     output = fopen(filename, "w");
     if (!output) {
         fprintf(stderr, "Cannot open output file %s\n", filename);
         exit(1);
     }
 
+    fprintf(stderr, "[DEBUG] Output file opened: %s\n", filename);
     initSymTab();
+    fprintf(stderr, "[DEBUG] Symbol table initialized\n");
 
     /* ===== NEW: STRING LITERAL SUPPORT ===== */
     /* Pre-pass: collect all string literals before code generation */
+    fprintf(stderr, "[DEBUG] Collecting strings...\n");
     collectStrings(root);
+    fprintf(stderr, "[DEBUG] String collection complete. Found %d strings\n", stringCount);
     /* ===== END: STRING LITERAL SUPPORT ===== */
 
+    fprintf(stderr, "[DEBUG] Writing .data section\n");
     fprintf(output, ".data\n");
     fprintf(output, "true_str: .asciiz \"true\"\n");
     fprintf(output, "false_str: .asciiz \"false\"\n");
@@ -1439,17 +1697,25 @@ void generateMIPS(ASTNode* root, const char* filename) {
     fprintf(output, "\n.text\n");
 
     // Collect all global function names
+    fprintf(stderr, "[DEBUG] Collecting global functions...\n");
     char* funcNames[100];
     int funcCount = 0;
     collectGlobalFunctions(root, funcNames, &funcCount);
+    fprintf(stderr, "[DEBUG] Found %d functions\n", funcCount);
 
     // Output .globl directives for all functions
+    fprintf(stderr, "[DEBUG] Writing .globl directives\n");
     for (int i = 0; i < funcCount; i++) {
+        fprintf(stderr, "[DEBUG] .globl %s\n", funcNames[i]);
         fprintf(output, ".globl %s\n", funcNames[i]);
     }
     fprintf(output, "\n");
 
+    fprintf(stderr, "[DEBUG] Starting statement generation...\n");
     genStmt(root);
+    fprintf(stderr, "[DEBUG] Statement generation complete!\n");
 
+    fprintf(stderr, "[DEBUG] Closing output file\n");
     fclose(output);
+    fprintf(stderr, "[DEBUG] ===== MIPS Code Generation Complete =====\n");
 }

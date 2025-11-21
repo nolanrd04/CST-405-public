@@ -84,6 +84,12 @@ int addVar(char* name, char* type) {
     symtab.vars[symtab.count].offset = symtab.nextOffset;
     symtab.vars[symtab.count].scope = symtab.currentScope; /* Set scope level */
     
+    /* Detect if type is an array (ends with [] or [][]) */
+    symtab.vars[symtab.count].isArray = 0;
+    if (type && (strstr(type, "[]") != NULL)) {
+        symtab.vars[symtab.count].isArray = 1;
+    }
+    
     /* Advance offset by 4 bytes (size of int in MIPS) */
     symtab.nextOffset += 4;
     symtab.count++;
@@ -122,26 +128,58 @@ char* getVarType(char* name) {
 
 /* ##### ARRAYS ##### */
 int addArrayVar(char* name, int size, char* type) {
+    fprintf(stderr, "[DEBUG-SYMTAB] addArrayVar called: name=%s, size=%d, type=%s\n",
+            name ? name : "NULL",
+            size,
+            type ? type : "NULL");
+
     /* Check for duplicate declaration */
     if (isVarDeclaredInCurrentScope(name)) {
         printf("SYMTAB ERROR: Variable %s already declared in current scope\n", name);
         return -1;  /* Error: variable already exists */
     }
-    
+
+    fprintf(stderr, "[DEBUG-SYMTAB] No duplicate found, adding to symbol table\n");
+    fprintf(stderr, "[DEBUG-SYMTAB] symtab.count=%d, MAX_VARS=%d\n", symtab.count, MAX_VARS);
+
+    // Check if symbol table is full
+    if (symtab.count >= MAX_VARS) {
+        fprintf(stderr, "[DEBUG-SYMTAB] ERROR: Symbol table is full! Cannot add more variables.\n");
+        fprintf(stderr, "[DEBUG-SYMTAB] Consider increasing MAX_VARS in symtab.h\n");
+        return -1;
+    }
+
+    fprintf(stderr, "[DEBUG-SYMTAB] Calling strdup on name...\n");
+
     /* Add new symbol entry */
     symtab.vars[symtab.count].name = strdup(name);
-    symtab.vars[symtab.count].type = strdup(type);  /* ✅ ADDED: Set the type */
+    fprintf(stderr, "[DEBUG-SYMTAB] name strdup done, calling strdup on type...\n");
+
+    // Check if type is NULL before calling strdup
+    if (type == NULL) {
+        fprintf(stderr, "[DEBUG-SYMTAB] ERROR: type is NULL! Cannot call strdup on NULL pointer\n");
+        symtab.vars[symtab.count].type = strdup("int");  // Default to "int" if NULL
+        fprintf(stderr, "[DEBUG-SYMTAB] Using default type 'int'\n");
+    } else {
+        symtab.vars[symtab.count].type = strdup(type);  /* ✅ ADDED: Set the type */
+    }
+    fprintf(stderr, "[DEBUG-SYMTAB] type strdup done, setting other fields...\n");
+
     symtab.vars[symtab.count].offset = symtab.nextOffset;
     symtab.vars[symtab.count].isArray = 1; // Mark as array
     symtab.vars[symtab.count].arraySize = size; // Store array size
     symtab.vars[symtab.count].scope = symtab.currentScope; /* NEW Set scope level */
-    
+
+    fprintf(stderr, "[DEBUG-SYMTAB] All fields set, advancing offset...\n");
+
     /* Advance offset by size * 4 bytes (size of int in MIPS) */
     symtab.nextOffset += size * 4;
     symtab.count++;
 
     printf("SYMTAB: Added array '%s[%d]' at scope %d, offset %d\n", name, size, symtab.currentScope, symtab.vars[symtab.count - 1].offset);
-    
+
+    fprintf(stderr, "[DEBUG-SYMTAB] addArrayVar returning offset: %d\n", symtab.vars[symtab.count - 1].offset);
+
     /* Return the offset for this array variable */
     return symtab.vars[symtab.count - 1].offset;
 }
