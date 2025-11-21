@@ -41,10 +41,10 @@ int testArithmetic(int a, int b) {
     int complex;
 
     /* Test all four basic operations */
-    sum = a + b;
-    diff = a - b;
-    prod = a * b;
-    quot = a / b;
+    sum = a + b; // 15
+    diff = a - b; // 5
+    prod = a * b; // 50
+    quot = a / b; // 2
 
     /* Test operator precedence: should be 2 + (3 * 4) = 14 */
     complex = 2 + 3 * 4;
@@ -53,9 +53,9 @@ int testArithmetic(int a, int b) {
     complex = (2 + 3) * 4;
 
     /* Complex expression */
-    complex = a * b + a / b - a + b;
+    complex = a * b + a / b - a + b; 
 
-    return sum + diff + prod + quot;
+    return sum + diff + prod + quot; 
 }
 
 /* ========================================

@@ -1,0 +1,11 @@
+int testFunc(int a, int b) {
+    println(a);
+    println(b);
+    return a - b;
+}
+
+void main() {
+    int result;
+    result = testFunc(10, 5);
+    println(result);
+}

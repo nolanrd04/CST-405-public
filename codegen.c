@@ -211,8 +211,7 @@ void genExpr(ASTNode* node) {
         case NODE_UNARYOP: {
             if (node->data.unaryop.op == OP_NOT) {
                 genExpr(node->data.unaryop.operand);
-                int operandReg = tempReg - 1;
-                if (operandReg < 0) operandReg = 0;
+                int operandReg = (tempReg > 0) ? tempReg - 1 : 0;
                 fprintf(output, "    # Logical NOT\n");
                 fprintf(output, "    seq $t%d, $t%d, $zero  # NOT operation\n", 
                         operandReg, operandReg);
@@ -271,12 +270,10 @@ void genExpr(ASTNode* node) {
             } else {
                 int leftReg, rightReg;
                 genExpr(node->data.binop.left);
-                leftReg = tempReg - 1;
+                leftReg = (tempReg > 0) ? tempReg - 1 : 0;
                 genExpr(node->data.binop.right);
-                rightReg = tempReg - 1;
-                if (leftReg < 0) leftReg = 0;
-                if (rightReg < 0) rightReg = 0;
-        
+                rightReg = (tempReg > 0) ? tempReg - 1 : 0;
+
                 // Arithmetic operators
                 if (node->data.binop.op == OP_ADD) {
                     fprintf(output, "    add $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
@@ -315,7 +312,7 @@ void genExpr(ASTNode* node) {
         
         case NODE_ARRAY_ACCESS: {
             genExpr(node->data.array_access.index);
-            int idxReg = tempReg - 1;
+            int idxReg = (tempReg > 0) ? tempReg - 1 : 0;
             int baseReg = getNextTemp();
             int addrReg = getNextTemp();
             int resReg  = getNextTemp();
@@ -358,9 +355,9 @@ void genExpr(ASTNode* node) {
             }
 
             genExpr(node->data.array_assign.index);
-            int idxReg = tempReg - 1;
+            int idxReg = (tempReg > 0) ? tempReg - 1 : 0;
             genExpr(node->data.array_assign.value);
-            int valReg = tempReg - 1;
+            int valReg = (tempReg > 0) ? tempReg - 1 : 0;
             int baseReg = getNextTemp();
             int addrReg = getNextTemp();
 
@@ -405,9 +402,9 @@ void genExpr(ASTNode* node) {
             }
 
             genExpr(node->data.array_2d_access.indexX);
-            int idxXReg = tempReg - 1;
+            int idxXReg = (tempReg > 0) ? tempReg - 1 : 0;
             genExpr(node->data.array_2d_access.indexY);
-            int idxYReg = tempReg - 1;
+            int idxYReg = (tempReg > 0) ? tempReg - 1 : 0;
 
             int baseOffset = getVarOffset(node->data.array_2d_access.name);
             if (baseOffset == -1) {
@@ -757,15 +754,18 @@ void genStmt(ASTNode* node) {
             // Generate a unique label for this if statement
             static int ifCount = 0;
             int currentIf = ifCount++;
-    
+
             fprintf(output, "    # If statement\n");
-    
+
             // Generate code for the condition
             tempReg = 0;
             genExpr(node->condition);
-            
+
+            // Get the register that contains the condition result
+            int condReg = (tempReg > 0) ? tempReg - 1 : 0;
+
             // Branch if condition is false (or zero)
-            fprintf(output, "    beqz $t0, else_%d\n", currentIf);
+            fprintf(output, "    beqz $t%d, else_%d\n", condReg, currentIf);
     
             // Generate code for the 'then' block
             genStmt(node->left);
@@ -827,9 +827,9 @@ void genStmt(ASTNode* node) {
             }
 
             genExpr(node->data.array_assign.index);
-            int idxReg = tempReg - 1;
+            int idxReg = (tempReg > 0) ? tempReg - 1 : 0;
             genExpr(node->data.array_assign.value);
-            int valReg = tempReg - 1;
+            int valReg = (tempReg > 0) ? tempReg - 1 : 0;
             int baseReg = getNextTemp();
             int addrReg = getNextTemp();
 
