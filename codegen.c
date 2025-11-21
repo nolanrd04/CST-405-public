@@ -344,6 +344,7 @@ void genExpr(ASTNode* node) {
                 tempReg = 0;
             } else {
                 fprintf(output, "    lw    $t%d, 0($t%d)     # load int value\n", resReg, addrReg);
+                tempReg = resReg + 1;  // Update tempReg to point past the result register
             }
             break;
         }
@@ -356,8 +357,16 @@ void genExpr(ASTNode* node) {
 
             genExpr(node->data.array_assign.index);
             int idxReg = (tempReg > 0) ? tempReg - 1 : 0;
+
+            // Save index in a higher register before evaluating value
+            int savedIdxReg = tempReg;  // Use next register for saved index
+            fprintf(output, "    move $t%d, $t%d\n", savedIdxReg, idxReg);
+            tempReg++;
+
             genExpr(node->data.array_assign.value);
             int valReg = (tempReg > 0) ? tempReg - 1 : 0;
+
+            idxReg = savedIdxReg;  // Use the saved index
             int baseReg = getNextTemp();
             int addrReg = getNextTemp();
 
@@ -828,8 +837,16 @@ void genStmt(ASTNode* node) {
 
             genExpr(node->data.array_assign.index);
             int idxReg = (tempReg > 0) ? tempReg - 1 : 0;
+
+            // Save index in a higher register before evaluating value
+            int savedIdxReg = tempReg;  // Use next register for saved index
+            fprintf(output, "    move $t%d, $t%d\n", savedIdxReg, idxReg);
+            tempReg++;
+
             genExpr(node->data.array_assign.value);
             int valReg = (tempReg > 0) ? tempReg - 1 : 0;
+
+            idxReg = savedIdxReg;  // Use the saved index
             int baseReg = getNextTemp();
             int addrReg = getNextTemp();
 
