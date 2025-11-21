@@ -23,11 +23,9 @@
    GLOBAL VARIABLE DECLARATIONS
    ======================================== */
 
-/* REMOVED: Global variables not supported in this compiler
 int globalCounter;
 int globalArray[20];
 int globalResult;
-*/
 
 /* ========================================
    ARITHMETIC OPERATIONS TESTING
@@ -920,17 +918,16 @@ void main() {
     result = testComplexExpressions(10, 5, 3);
     println(result);
 
-    /* Test 24: Global Variables - SKIPPED (not supported) */
+    /* Test 24: Global Variables */
     print("Test");  /* Test marker */
     println(" 24");
-    
-    /* globalCounter = 100;
+
+    globalCounter = 100;
     globalArray[0] = 10;
     globalArray[1] = 20;
     globalArray[2] = 30;
     println(globalCounter);
-    println(globalArray[0] + globalArray[1] + globalArray[2]); */
-    println(0);  /* Print 0 to indicate test skipped */
+    println(globalArray[0] + globalArray[1] + globalArray[2]);
 
     /* Test 25: Void Functions */
     print("Test");  /* Test marker */

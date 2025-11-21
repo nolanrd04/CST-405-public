@@ -69,6 +69,17 @@ int isVarDeclaredInCurrentScope(char* name){
     return 0;  /* Not found in current scope */
 }
 
+/* Check if variable is global (scope 0) */
+int isGlobalVar(char* name) {
+    /* Search backwards (most recent declarations first) */
+    for (int i = symtab.count - 1; i >= 0; i--) {
+        if (strcmp(symtab.vars[i].name, name) == 0) {
+            return (symtab.vars[i].scope == 0);  /* Return 1 if scope is 0 (global) */
+        }
+    }
+    return 0;  /* Variable not found */
+}
+
 
 /* Add a new variable to the symbol table */
 int addVar(char* name, char* type) {

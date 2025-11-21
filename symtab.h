@@ -53,6 +53,7 @@ void enterScope();               /* Enter a new scope level */
 void exitScope();                /* Exit current scope level */
 int getCurrentScope();         /* Get current scope level */
 int isVarDeclaredInCurrentScope(char* name); /* Check if variable is declared in current scope */
+int isGlobalVar(char* name);     /* Check if variable is global (scope 0) */
 
 /* NEW: Print symbol table for debugging */
 void printSymTab();

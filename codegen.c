@@ -197,14 +197,28 @@ void genExpr(ASTNode* node) {
             if (offset == -1) {
                 fprintf(stderr, "Error: Variable %s not declared\n", node->data.name);
                 exit(1);
-            }    
-            char* type = getVarType(node->data.name);
-            if (type && strcmp(type, "float") == 0) {
-                fprintf(output, "    lwc1 $f0, %d($sp)\n", offset);
-                tempReg = 0;
-            } else {
-                fprintf(output, "    lw $t%d, %d($sp)\n", getNextTemp(), offset);
             }
+            char* type = getVarType(node->data.name);
+
+            /* ===== NEW: GLOBAL VARIABLES SUPPORT ===== */
+            if (isGlobalVar(node->data.name)) {
+                // Global variable - use label-based addressing
+                if (type && strcmp(type, "float") == 0) {
+                    fprintf(output, "    lwc1 $f0, %s\n", node->data.name);
+                    tempReg = 0;
+                } else {
+                    fprintf(output, "    lw $t%d, %s\n", getNextTemp(), node->data.name);
+                }
+            } else {
+                // Local variable - use stack-relative addressing
+                if (type && strcmp(type, "float") == 0) {
+                    fprintf(output, "    lwc1 $f0, %d($sp)\n", offset);
+                    tempReg = 0;
+                } else {
+                    fprintf(output, "    lw $t%d, %d($sp)\n", getNextTemp(), offset);
+                }
+            }
+            /* ===== END: GLOBAL VARIABLES SUPPORT ===== */
             break;
         }
             
@@ -325,15 +339,22 @@ void genExpr(ASTNode* node) {
 
             // Check if this is an array parameter (passed by reference)
             char* varType = getVarType(node->data.array_access.name);
-            if (varType && strstr(varType, "[]")) {
+
+            /* ===== NEW: GLOBAL VARIABLES SUPPORT ===== */
+            if (isGlobalVar(node->data.array_access.name)) {
+                // Global array: use label-based addressing
+                fprintf(output, "    la    $t%d, %s   # load address of global array %s\n",
+                        baseReg, node->data.array_access.name, node->data.array_access.name);
+            } else if (varType && strstr(varType, "[]")) {
                 // Array parameter: baseOffset contains a pointer, dereference it
                 fprintf(output, "    lw    $t%d, %d($sp)   # load pointer to array %s\n",
                         baseReg, baseOffset, node->data.array_access.name);
             } else {
-                // Regular array: calculate address from base offset
+                // Regular local array: calculate address from base offset
                 fprintf(output, "    addiu $t%d, $sp, %d   # base of %s\n",
                         baseReg, baseOffset, node->data.array_access.name);
             }
+            /* ===== END: GLOBAL VARIABLES SUPPORT ===== */
 
             fprintf(output, "    sll  $t%d, $t%d, 2      # idx * 4\n", idxReg, idxReg);
             fprintf(output, "    addu  $t%d, $t%d, $t%d  # element address\n",
@@ -378,15 +399,22 @@ void genExpr(ASTNode* node) {
 
             // Check if this is an array parameter (passed by reference)
             char* varType = getVarType(node->data.array_assign.name);
-            if (varType && strstr(varType, "[]")) {
+
+            /* ===== NEW: GLOBAL VARIABLES SUPPORT ===== */
+            if (isGlobalVar(node->data.array_assign.name)) {
+                // Global array: use label-based addressing
+                fprintf(output, "    la    $t%d, %s   # load address of global array %s\n",
+                        baseReg, node->data.array_assign.name, node->data.array_assign.name);
+            } else if (varType && strstr(varType, "[]")) {
                 // Array parameter: baseOffset contains a pointer, dereference it
                 fprintf(output, "    lw    $t%d, %d($sp)   # load pointer to array %s\n",
                         baseReg, baseOffset, node->data.array_assign.name);
             } else {
-                // Regular array: calculate address from base offset
+                // Regular local array: calculate address from base offset
                 fprintf(output, "    addiu $t%d, $sp, %d   # base of %s\n",
                         baseReg, baseOffset, node->data.array_assign.name);
             }
+            /* ===== END: GLOBAL VARIABLES SUPPORT ===== */
 
             fprintf(output, "    sll  $t%d, $t%d, 2      # idx * 4\n", idxReg, idxReg);
             fprintf(output, "    addu  $t%d, $t%d, $t%d  # element address\n",
@@ -618,12 +646,26 @@ void genStmt(ASTNode* node) {
             }
             genExpr(node->data.assign.value);
             char* type = getVarType(node->data.assign.var);
-            if (type && strcmp(type, "float") == 0) {
-                fprintf(output, "    swc1 $f0, %d($sp)\n", offset);
+
+            /* ===== NEW: GLOBAL VARIABLES SUPPORT ===== */
+            if (isGlobalVar(node->data.assign.var)) {
+                // Global variable - use label-based addressing
+                if (type && strcmp(type, "float") == 0) {
+                    fprintf(output, "    swc1 $f0, %s\n", node->data.assign.var);
+                } else {
+                    int resultReg = tempReg > 0 ? tempReg - 1 : 0;
+                    fprintf(output, "    sw $t%d, %s\n", resultReg, node->data.assign.var);
+                }
             } else {
-                int resultReg = tempReg > 0 ? tempReg - 1 : 0;
-                fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, offset);
+                // Local variable - use stack-relative addressing
+                if (type && strcmp(type, "float") == 0) {
+                    fprintf(output, "    swc1 $f0, %d($sp)\n", offset);
+                } else {
+                    int resultReg = tempReg > 0 ? tempReg - 1 : 0;
+                    fprintf(output, "    sw $t%d, %d($sp)\n", resultReg, offset);
+                }
             }
+            /* ===== END: GLOBAL VARIABLES SUPPORT ===== */
             tempReg = 0;
             break;
         }
@@ -858,15 +900,22 @@ void genStmt(ASTNode* node) {
 
             // Check if this is an array parameter (passed by reference)
             char* varType = getVarType(node->data.array_assign.name);
-            if (varType && strstr(varType, "[]")) {
+
+            /* ===== NEW: GLOBAL VARIABLES SUPPORT ===== */
+            if (isGlobalVar(node->data.array_assign.name)) {
+                // Global array: use label-based addressing
+                fprintf(output, "    la    $t%d, %s   # load address of global array %s\n",
+                        baseReg, node->data.array_assign.name, node->data.array_assign.name);
+            } else if (varType && strstr(varType, "[]")) {
                 // Array parameter: baseOffset contains a pointer, dereference it
                 fprintf(output, "    lw    $t%d, %d($sp)   # load pointer to array %s\n",
                         baseReg, baseOffset, node->data.array_assign.name);
             } else {
-                // Regular array: calculate address from base offset
+                // Regular local array: calculate address from base offset
                 fprintf(output, "    addiu $t%d, $sp, %d   # base of %s\n",
                         baseReg, baseOffset, node->data.array_assign.name);
             }
+            /* ===== END: GLOBAL VARIABLES SUPPORT ===== */
 
             fprintf(output, "    sll  $t%d, $t%d, 2      # idx * 4\n", idxReg, idxReg);
             fprintf(output, "    addu  $t%d, $t%d, $t%d  # element address\n",
@@ -1657,6 +1706,57 @@ void collectStrings(ASTNode* node) {
     }
 }
 
+/* ===== NEW: GLOBAL VARIABLES SUPPORT ===== */
+// Helper function to collect and generate global variable declarations
+void collectGlobalVars(ASTNode* node) {
+    if (!node) return;
+
+    switch(node->type) {
+        case NODE_DECL:
+            // Global variable declaration at scope 0
+            if (getCurrentScope() == 0) {
+                fprintf(stderr, "[DEBUG] Found global variable: %s\n", node->data.decl.varName);
+                fprintf(output, "%s: .word 0\n", node->data.decl.varName);
+                addVar(node->data.decl.varName, node->data.decl.varType);
+            }
+            break;
+
+        case NODE_DECL_ASSIGN:
+            // Global variable with initialization at scope 0
+            if (getCurrentScope() == 0) {
+                fprintf(stderr, "[DEBUG] Found global variable with init: %s\n", node->data.declAssign.id);
+                // For now, initialize to 0 (proper initialization would require constant folding)
+                fprintf(output, "%s: .word 0\n", node->data.declAssign.id);
+                addVar(node->data.declAssign.id, node->data.declAssign.type);
+            }
+            break;
+
+        case NODE_ARRAY_DECL:
+            // Global array declaration at scope 0
+            if (getCurrentScope() == 0) {
+                int size = node->data.array_decl.size;
+                fprintf(stderr, "[DEBUG] Found global array: %s[%d]\n", node->data.array_decl.name, size);
+                fprintf(output, "%s: .space %d\n", node->data.array_decl.name, size * 4);
+                addArrayVar(node->data.array_decl.name, size, node->data.array_decl.type);
+            }
+            break;
+
+        case NODE_STMT_LIST:
+            // Process statement list, but stop at function declarations
+            if (node->data.stmtlist.stmt && node->data.stmtlist.stmt->type != NODE_FUNC_DECL) {
+                collectGlobalVars(node->data.stmtlist.stmt);
+            }
+            if (node->data.stmtlist.next) {
+                collectGlobalVars(node->data.stmtlist.next);
+            }
+            break;
+
+        default:
+            break;
+    }
+}
+/* ===== END: GLOBAL VARIABLES SUPPORT ===== */
+
 // Helper function to collect all global function names
 void collectGlobalFunctions(ASTNode* node, char** funcNames, int* funcCount) {
     if (!node || !funcNames || !funcCount) return;
@@ -1703,14 +1803,21 @@ void generateMIPS(ASTNode* root, const char* filename) {
     fprintf(output, ".data\n");
     fprintf(output, "true_str: .asciiz \"true\"\n");
     fprintf(output, "false_str: .asciiz \"false\"\n");
-    
+
     /* ===== NEW: STRING LITERAL SUPPORT ===== */
     /* Output all string literals */
     for (int i = 0; i < stringCount; i++) {
         fprintf(output, "str_%d: .asciiz \"%s\"\n", i, stringTable[i].value);
     }
     /* ===== END: STRING LITERAL SUPPORT ===== */
-    
+
+    /* ===== NEW: GLOBAL VARIABLES SUPPORT ===== */
+    /* Pre-pass: collect global variable declarations */
+    fprintf(stderr, "[DEBUG] Collecting global variables...\n");
+    collectGlobalVars(root);
+    fprintf(stderr, "[DEBUG] Global variable collection complete\n");
+    /* ===== END: GLOBAL VARIABLES SUPPORT ===== */
+
     fprintf(output, "\n.text\n");
 
     // Collect all global function names
