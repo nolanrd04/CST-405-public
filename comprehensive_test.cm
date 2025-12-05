@@ -443,7 +443,8 @@ int testComplexExpressions(int a, int b, int c) {
     result = ((a + b) * (c - a)) / (b + 1);
 
     /* Long expression */
-    result = a * b + c * a - b / c + a - b + c;
+    result = a * b + c * a - b / c + a - b + c; 
+    /* 10 * 5 + 3 * 10 - 5 / 3 + 10 - 5 + 3 -> 50 + 30 - 5/3 + 8 -> 88 - 5/3 */
 
     return result;
 }

@@ -20,7 +20,7 @@
   - Test 20: 55, 225 -- pass
   - Test 21: 6, 3 -- pass
   - Test 22: 12, 4 -- pass
-  - Test 23: 13 -- fail (87)
+  - Test 23: 87
   - Test 24: 100, 60 -- pass
   - Test 25: 10 -- pass
   - Final marker: 999 -- pass
