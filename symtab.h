@@ -5,12 +5,14 @@
  * Tracks all declared variables during compilation
  * Maps variable names to their memory locations (stack offsets)
  * Used for semantic checking and code generation
+ * OPTIMIZED: Uses hash table for O(1) average lookup instead of O(n)
  */
 
-#define MAX_VARS 100  /* Maximum number of variables supported */
+#define MAX_VARS 1000      /* Maximum number of variables supported (increased) */
+#define HASH_SIZE 211      /* Prime number for better hash distribution */
 
 /* SYMBOL ENTRY - Information about each variable */
-typedef struct {
+typedef struct SymbolNode {
     char* name;     /* Variable identifier */
     char* type;     /* Variable type ("int", "float", etc.) */
     int offset;     /* Stack offset in bytes (for MIPS stack frame) */
@@ -21,17 +23,25 @@ typedef struct {
 
     /* Scope Information*/
     int scope;      /* Scope level (0= global, 1 = function, 2+ = nested)*/
+
+    /* Hash table chaining */
+    struct SymbolNode* next;  /* For collision resolution */
 } Symbol;
 
 /* SYMBOL TABLE STRUCTURE */
 typedef struct {
-    Symbol vars[MAX_VARS];  /* Array of all variables */
+    Symbol* buckets[HASH_SIZE];  /* Hash table buckets */
+    Symbol vars[MAX_VARS];  /* Still keep array for scope management */
     int count;              /* Number of variables declared */
     int nextOffset;         /* Next available stack offset */
 
     /* New Scope tracking*/
     int currentScope;  /* Current scope level */
     int scopeOffsets[MAX_VARS]; /* Stack offsets at each scope level */
+
+    /* Performance counters */
+    int lookups;       /* Total number of lookups */
+    int collisions;    /* Number of hash collisions */
 } SymbolTable;
 
 /* SYMBOL TABLE OPERATIONS */
@@ -40,6 +50,9 @@ int addVar(char* name, char* type);          /* Add new variable, returns offset
 int getVarOffset(char* name);    /* Get stack offset for variable, -1 if not found */
 char* getVarType(char* name);
 int isVarDeclared(char* name);   /* Check if variable exists (1=yes, 0=no) */
+
+/* Hash function for symbol table */
+unsigned int hash_symbol(const char* str);
 int addArrayVar(char* name, int size, char* type); /* Add new array variable, returns offset or -1 if duplicate */
 int isArrayVar(char* name);      /* Check if variable is an array (1=yes, 0=no) */
 int getArraySize(char* name);    /* Get size of array */
@@ -73,6 +86,7 @@ typedef struct{
 }FunctionTable;
 
 extern FunctionTable funcTable;
+extern SymbolTable symtab;  /* Make symbol table accessible globally */
 
 
 void initFuncTable();

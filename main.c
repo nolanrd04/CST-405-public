@@ -10,6 +10,10 @@
 #include "tac.h"
 #include "symtab.h"
 
+/* Performance optimization headers */
+#include "benchmark.h"
+#include "stringpool.h"
+
 extern int yyparse();
 extern FILE* yyin;
 extern ASTNode* root;
@@ -62,6 +66,15 @@ int main(int argc, char* argv[]) {
     log_printf("║          MINIMAL C COMPILER - EDUCATIONAL VERSION         ║\n");
     log_printf("╚════════════════════════════════════════════════════════════╝\n");
     log_printf("\n");
+
+    /* Initialize performance optimization systems */
+    init_string_pool();
+
+    /* CRITICAL: Initialize symbol table BEFORE parsing */
+    initSymTab();
+
+    /* Start overall compilation benchmark */
+    BenchmarkResult* total_bench = start_benchmark();
 
     /* PHASE 1: Lexical and Syntax Analysis */
     log_printf("┌──────────────────────────────────────────────────────────┐\n");
@@ -130,6 +143,30 @@ int main(int argc, char* argv[]) {
         log_printf("╚════════════════════════════════════════════════════════════╝\n");
         log_printf("\n");
         printSymTab();
+
+        /* Print performance statistics */
+        log_printf("\n");
+        log_printf("╔════════════════════════════════════════════════════════════╗\n");
+        log_printf("║              PERFORMANCE OPTIMIZATION STATS                ║\n");
+        log_printf("╚════════════════════════════════════════════════════════════╝\n");
+
+        /* Overall compilation time */
+        end_benchmark(total_bench, "Total Compilation");
+
+        /* Symbol table statistics */
+        log_printf("\n=== Symbol Table Hash Table Statistics ===\n");
+        log_printf("Total lookups: %d\n", symtab.lookups);
+        log_printf("Hash collisions: %d\n", symtab.collisions);
+        log_printf("Collision rate: %.2f%%\n",
+                   symtab.lookups > 0 ? (100.0 * symtab.collisions / symtab.lookups) : 0.0);
+        log_printf("Variables stored: %d\n", symtab.count);
+        log_printf("Hash table size: %d buckets\n", HASH_SIZE);
+
+        /* String pool statistics */
+        print_string_stats();
+
+        log_printf("\n");
+        free_benchmark(total_bench);
     } else {
         log_printf("✗ Parse failed - check your syntax!\n");
         log_printf("Common errors:\n");

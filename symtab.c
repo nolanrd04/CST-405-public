@@ -14,12 +14,28 @@ SymbolTable symtab;
 /* Global Function Table*/
 FunctionTable funcTable;
 
+/* Hash function - djb2 algorithm */
+unsigned int hash_symbol(const char* str) {
+    unsigned int hash = 5381;
+    int c;
+    while ((c = *str++))
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    return hash % HASH_SIZE;
+}
+
 /* Initialize an empty symbol table */
 void initSymTab() {
     symtab.count = 0;       /* No variables yet */
     symtab.nextOffset = 0;  /* Start at stack offset 0 */
     symtab.currentScope = 0; /* Start at global scope */
     symtab.scopeOffsets[0] = 0; /* Global scope offset */
+    symtab.lookups = 0;
+    symtab.collisions = 0;
+
+    /* Initialize all hash buckets to NULL */
+    for (int i = 0; i < HASH_SIZE; i++) {
+        symtab.buckets[i] = NULL;
+    }
 }
 
 /* NEW = Enter new scope (when entering function or block)*/
@@ -35,11 +51,37 @@ void enterScope(){
 void exitScope(){
     printf("SCOPE = Exiting scope %d\n", symtab.currentScope);
 
-    /*Remove all variables declared in this scope*/
+    /*Remove all variables declared in this scope from both array AND hash table*/
     int i = symtab.count - 1;
     while (i>= 0 && symtab.vars[i].scope >= symtab.currentScope){
         printf("SCOPE = Removing variable %s from scope %d\n", symtab.vars[i].name, symtab.currentScope);
+
+        /* CRITICAL: Remove from hash table to avoid dangling pointers */
+        unsigned int bucket = hash_symbol(symtab.vars[i].name);
+        Symbol* current = symtab.buckets[bucket];
+        Symbol* prev = NULL;
+
+        /* Find and remove from hash bucket chain */
+        while (current != NULL) {
+            if (current == &symtab.vars[i]) {
+                /* Found it - remove from chain */
+                if (prev == NULL) {
+                    /* First in chain */
+                    symtab.buckets[bucket] = current->next;
+                } else {
+                    /* Middle or end of chain */
+                    prev->next = current->next;
+                }
+                break;
+            }
+            prev = current;
+            current = current->next;
+        }
+
         free(symtab.vars[i].name); // Free the allocated name
+        if (symtab.vars[i].type) {
+            free(symtab.vars[i].type); // Free the allocated type
+        }
         symtab.count--;
         i--;
     }
@@ -88,37 +130,54 @@ int addVar(char* name, char* type) {
         printf("SYMTAB ERROR: Variable %s already declared in current scope\n", name);
         return -1;  /* Error: variable already exists */
     }
-    
-    /* Add new symbol entry */
+
+    /* Add new symbol entry to array */
     symtab.vars[symtab.count].name = strdup(name);
     symtab.vars[symtab.count].type = strdup(type);
     symtab.vars[symtab.count].offset = symtab.nextOffset;
     symtab.vars[symtab.count].scope = symtab.currentScope; /* Set scope level */
-    
+    symtab.vars[symtab.count].next = NULL;
+
     /* Detect if type is an array (ends with [] or [][]) */
     symtab.vars[symtab.count].isArray = 0;
     if (type && (strstr(type, "[]") != NULL)) {
         symtab.vars[symtab.count].isArray = 1;
     }
-    
+
+    /* Add to hash table for fast lookup */
+    unsigned int bucket = hash_symbol(name);
+    if (symtab.buckets[bucket] != NULL) {
+        symtab.collisions++;
+    }
+
+    /* Insert at head of chain (most recent scope first) */
+    symtab.vars[symtab.count].next = symtab.buckets[bucket];
+    symtab.buckets[bucket] = &symtab.vars[symtab.count];
+
     /* Advance offset by 4 bytes (size of int in MIPS) */
     symtab.nextOffset += 4;
     symtab.count++;
-    
+
     /* Return the offset for this variable */
     return symtab.vars[symtab.count - 1].offset;
 }
 
-/* Look up a variable's stack offset */
+/* Look up a variable's stack offset - OPTIMIZED with hash table */
 int getVarOffset(char* name) {
-    /*Search Backwards (most recent declarations first)*/
-    /*This implements shadowing: inner scope varaibles hide outer ones*/
+    symtab.lookups++;
 
-    for (int i = symtab.count -1; i>=0; i--) {
-        if (strcmp(symtab.vars[i].name, name) == 0) {
-            return symtab.vars[i].offset;  /* Found it */
+    /* Hash table lookup - O(1) average case */
+    unsigned int bucket = hash_symbol(name);
+    Symbol* current = symtab.buckets[bucket];
+
+    /* Walk the chain (handles collisions and shadowing) */
+    while (current != NULL) {
+        if (strcmp(current->name, name) == 0) {
+            return current->offset;  /* Found it */
         }
+        current = current->next;
     }
+
     return -1;  /* Variable not found - semantic error */
 }
 
@@ -128,11 +187,15 @@ int isVarDeclared(char* name) {
 }
 
 char* getVarType(char* name) {
-    /* Linear search through symbol table */
-    for (int i = 0; i < symtab.count; i++) {
-        if (strcmp(symtab.vars[i].name, name) == 0) {
-            return symtab.vars[i].type;  /* Return the type */
+    /* Hash table lookup - O(1) average case */
+    unsigned int bucket = hash_symbol(name);
+    Symbol* current = symtab.buckets[bucket];
+
+    while (current != NULL) {
+        if (strcmp(current->name, name) == 0) {
+            return current->type;  /* Return the type */
         }
+        current = current->next;
     }
     return NULL;  /* Variable not found */
 }
@@ -180,8 +243,17 @@ int addArrayVar(char* name, int size, char* type) {
     symtab.vars[symtab.count].isArray = 1; // Mark as array
     symtab.vars[symtab.count].arraySize = size; // Store array size
     symtab.vars[symtab.count].scope = symtab.currentScope; /* NEW Set scope level */
+    symtab.vars[symtab.count].next = NULL;
 
     fprintf(stderr, "[DEBUG-SYMTAB] All fields set, advancing offset...\n");
+
+    /* IMPORTANT: Add to hash table for fast lookup */
+    unsigned int bucket = hash_symbol(name);
+    if (symtab.buckets[bucket] != NULL) {
+        symtab.collisions++;
+    }
+    symtab.vars[symtab.count].next = symtab.buckets[bucket];
+    symtab.buckets[bucket] = &symtab.vars[symtab.count];
 
     /* Advance offset by size * 4 bytes (size of int in MIPS) */
     symtab.nextOffset += size * 4;
@@ -200,23 +272,33 @@ int isBoolType(char* type){
 }
 
 int isArrayVar(char* name) {
-    for (int i = 0; i < symtab.count; i++) {
-        if (strcmp(symtab.vars[i].name, name) == 0) {
-            return symtab.vars[i].isArray;  /* Return 1 if array, 0 if not */
+    /* Hash table lookup - O(1) average case */
+    unsigned int bucket = hash_symbol(name);
+    Symbol* current = symtab.buckets[bucket];
+
+    while (current != NULL) {
+        if (strcmp(current->name, name) == 0) {
+            return current->isArray;  /* Return 1 if array, 0 if not */
         }
+        current = current->next;
     }
     return 0;  /* Variable not found or not an array */
 }
 
 int getArraySize(char* name) {
-    for (int i = 0; i < symtab.count; i++) {
-        if (strcmp(symtab.vars[i].name, name) == 0) {
-            if (symtab.vars[i].isArray) {
-                return symtab.vars[i].arraySize;  /* Return size if array */
+    /* Hash table lookup - O(1) average case */
+    unsigned int bucket = hash_symbol(name);
+    Symbol* current = symtab.buckets[bucket];
+
+    while (current != NULL) {
+        if (strcmp(current->name, name) == 0) {
+            if (current->isArray) {
+                return current->arraySize;  /* Return size if array */
             } else {
                 return -1;  /* Not an array */
             }
         }
+        current = current->next;
     }
     return 0;  /* Variable not found */
 }
@@ -228,63 +310,88 @@ int addArray2DVar(char* name, int sizeX, int sizeY, char* type)
         printf("SYMTAB ERROR: Variable %s already declared in current scope\n", name);
         return -1;  /* Error: variable already exists */
     }
-    
+
     /* Add new symbol entry */
     symtab.vars[symtab.count].name = strdup(name);
+    symtab.vars[symtab.count].type = type ? strdup(type) : strdup("int");
     symtab.vars[symtab.count].offset = symtab.nextOffset;
     symtab.vars[symtab.count].isArray = 1; // Mark as array
     symtab.vars[symtab.count].array2DSizeX = sizeX;
     symtab.vars[symtab.count].array2DSizeY = sizeY;
     symtab.vars[symtab.count].scope = symtab.currentScope; /* NEW Store scope level */
-    
+    symtab.vars[symtab.count].next = NULL;
+
+    /* IMPORTANT: Add to hash table for fast lookup */
+    unsigned int bucket = hash_symbol(name);
+    if (symtab.buckets[bucket] != NULL) {
+        symtab.collisions++;
+    }
+    symtab.vars[symtab.count].next = symtab.buckets[bucket];
+    symtab.buckets[bucket] = &symtab.vars[symtab.count];
+
     /* Advance offset by size^2 * 4 bytes (size of int in MIPS) */
     symtab.nextOffset += (sizeX * sizeY) * 4;
     symtab.count++;
 
     printf("SYMTAB: Added 2D array '%s[%d][%d]' at scope %d, offset %d\n", name, sizeX, sizeY, symtab.currentScope, symtab.vars[symtab.count - 1].offset);
-    
+
     /* Return the offset for this array variable */
     return symtab.vars[symtab.count - 1].offset;
 }
 
 /* Get the X dimension of a 2D array */
 int getArray2DSizeX(char* name) {
-    for (int i = 0; i < symtab.count; i++) {
-        if (strcmp(symtab.vars[i].name, name) == 0) {
-            if (symtab.vars[i].isArray) {
-                return symtab.vars[i].array2DSizeX;
+    /* Hash table lookup - O(1) average case */
+    unsigned int bucket = hash_symbol(name);
+    Symbol* current = symtab.buckets[bucket];
+
+    while (current != NULL) {
+        if (strcmp(current->name, name) == 0) {
+            if (current->isArray) {
+                return current->array2DSizeX;
             } else {
                 return -1;  /* Not an array */
             }
         }
+        current = current->next;
     }
     return -1;  /* Variable not found */
 }
 
 /* Get the Y dimension of a 2D array */
 int getArray2DSizeY(char* name) {
-    for (int i = 0; i < symtab.count; i++) {
-        if (strcmp(symtab.vars[i].name, name) == 0) {
-            if (symtab.vars[i].isArray) {
-                return symtab.vars[i].array2DSizeY;
+    /* Hash table lookup - O(1) average case */
+    unsigned int bucket = hash_symbol(name);
+    Symbol* current = symtab.buckets[bucket];
+
+    while (current != NULL) {
+        if (strcmp(current->name, name) == 0) {
+            if (current->isArray) {
+                return current->array2DSizeY;
             } else {
                 return -1;  /* Not an array */
             }
         }
+        current = current->next;
     }
     return -1;  /* Variable not found */
 }
 
 /* Check if a variable is a 2D array */
 int is2DArrayVar(char* name) {
-    for (int i = 0; i < symtab.count; i++) {
-        if (strcmp(symtab.vars[i].name, name) == 0) {
-            if (symtab.vars[i].isArray && 
-                symtab.vars[i].array2DSizeX > 0 && 
-                symtab.vars[i].array2DSizeY > 0) {
+    /* Hash table lookup - O(1) average case */
+    unsigned int bucket = hash_symbol(name);
+    Symbol* current = symtab.buckets[bucket];
+
+    while (current != NULL) {
+        if (strcmp(current->name, name) == 0) {
+            if (current->isArray &&
+                current->array2DSizeX > 0 &&
+                current->array2DSizeY > 0) {
                 return 1;
             }
         }
+        current = current->next;
     }
     return 0;
 }
