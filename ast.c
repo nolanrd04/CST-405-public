@@ -350,6 +350,10 @@ void printAST(ASTNode* node, int level) {
             printf("PRINT\n");
             printAST(node->data.expr, level + 1);
             break;
+        case NODE_PRINTLN:
+            printf("PRINTLN\n");
+            printAST(node->data.expr, level + 1);
+            break;
         case NODE_STMT_LIST:
             /* Print statements in sequence at same level */
             printAST(node->data.stmtlist.stmt, level);

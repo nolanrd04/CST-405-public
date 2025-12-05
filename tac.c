@@ -703,10 +703,26 @@ void optimizeTAC() {
     
     while (curr) {
         TACInstr* newInstr = NULL;
-        
+
         switch(curr->op) {
             case TAC_DECL:
                 newInstr = createTAC(TAC_DECL, NULL, NULL, curr->result);
+                break;
+
+            case TAC_IF_FALSE:
+                newInstr = createTAC(TAC_IF_FALSE, curr->arg1, curr->arg2, curr->result);
+                break;
+
+            case TAC_SWITCH:
+                newInstr = createTAC(TAC_SWITCH, curr->arg1, curr->arg2, curr->result);
+                break;
+
+            case TAC_CASE:
+                newInstr = createTAC(TAC_CASE, curr->arg1, curr->arg2, curr->result);
+                break;
+
+            case TAC_DEFAULT:
+                newInstr = createTAC(TAC_DEFAULT, curr->arg1, curr->arg2, curr->result);
                 break;
                 
             case TAC_ADD:

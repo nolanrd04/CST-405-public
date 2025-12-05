@@ -1,26 +1,26 @@
- - Test 1: 72
-  - Test 2 (line 725): 100011
-  - Test 3 (line 732):  50
-  - Test 4 (line 739): 55
-  - Test 5 (line 746): 25
-  - Test 6 (line 753-754): 100
-  - Test 7 (line 761):120
-  - Test 8 (line 768): 13
-  - Test 9 (line 775): 32
-  - Test 10 (line 782): 6
-  - Test 11 (line 794):  found at index 5
-  - Test 12 (lines 806-807): prints 1, 2, 5, 8, 9
-  - Test 13: Max=9, Min=1
-  - Test 14: isPrime(17)=1 (true), isPrime(18)=0 (false)
+ - Test 1: 72 -- pass
+  - Test 2 (line 725): 100011 -- pass
+  - Test 3 (line 732):  50 -- pass
+  - Test 4 (line 739): 55 -- pass
+  - Test 5 (line 746): 25 -- pass
+  - Test 6 (line 753-754): 100 -- pass
+  - Test 7 (line 761):120 -- fail (1)
+  - Test 8 (line 768): 13 -- fail (6)
+  - Test 9 (line 775): 32 -- fail (5)
+  - Test 10 (line 782): 6 -- pass
+  - Test 11 (line 794):  found at index 5 -- pass
+  - Test 12 (lines 806-807): prints 1, 2, 5, 8, 9 -- pass
+  - Test 13: Max=9, Min=1 -- pass
+  - Test 14: isPrime(17)=1 (true), isPrime(18)=0 (false) -- pass
   - Test 15: 8 primes (2,3,5,7,11,13,17,19)
-  - Test 16: 5, 4, 3, 2, 1
-  - Test 17: 24, 10, 9
-  - Test 18: 1 (true)
-  - Test 19: 15, -1, 1, 0
-  - Test 20: 55, 225
-  - Test 21: 6, 3
-  - Test 22: 12, 4
-  - Test 23: 13
-  - Test 24: 0 (globals skipped)
+  - Test 16: 5, 4, 3, 2, 1 -- pass
+  - Test 17: 24, 10, 9 -- fail (24, 4, 9)
+  - Test 18: 1 (true) -- pass
+  - Test 19: 15, -1, 1, 0 -- pass
+  - Test 20: 55, 225 -- pass
+  - Test 21: 6, 3 -- pass
+  - Test 22: 12, 4 -- pass
+  - Test 23: 13 -- fail (87)
+  - Test 24: 0 (globals skipped) -- pass
   - Test 25: 10
-  - Final marker: 999
+  - Final marker: 999 -- pass

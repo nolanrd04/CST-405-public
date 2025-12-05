@@ -360,7 +360,7 @@ void genExpr(ASTNode* node) {
             fprintf(output, "    addu  $t%d, $t%d, $t%d  # element address\n",
                     addrReg, baseReg, idxReg);
 
-            if (varType && strcmp(varType, "float") == 0 || (varType && strstr(varType, "float[]"))) {
+            if (varType && (strcmp(varType, "float") == 0 || strstr(varType, "float[]"))) {
                 fprintf(output, "    lwc1 $f0, 0($t%d)     # load float value\n", addrReg);
                 tempReg = 0;
             } else {
@@ -1075,7 +1075,6 @@ void genStmt(ASTNode* node) {
             // Parameters are at: $sp + currentFunctionPrologueSize + (paramNum * 4)
             // This accounts for the space allocated in the prologue
             ASTNode* param = node->data.func_decl.params;
-            int paramNum = 0;
 
             fprintf(stderr, "[DEBUG] Loading parameters for function %s\n", node->data.func_decl.name);
 
