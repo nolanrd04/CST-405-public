@@ -631,7 +631,8 @@ void genExpr(ASTNode* node) {
                 fprintf(output, "    addi $sp, $sp, %d  # Deallocate argument space\n", totalArgs * 4);
             }
 
-            tempReg = 0;
+            // FIX: Function result is in $t0, so next temp should be $t1
+            tempReg = 1;
             break;
         }
 
@@ -1340,7 +1341,8 @@ void genStmt(ASTNode* node) {
                 fprintf(output, "    addi $sp, $sp, %d  # Deallocate argument space\n", totalArgs * 4);
             }
 
-            tempReg = 0;
+            // FIX: Function result is in $t0, so next temp should be $t1
+            tempReg = 1;
             break;
         }
         case NODE_SWITCH: {

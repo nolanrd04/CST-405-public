@@ -12,7 +12,7 @@
   - Test 12 (lines 806-807): prints 1, 2, 5, 8, 9 -- pass
   - Test 13: Max=9, Min=1 -- pass
   - Test 14: isPrime(17)=1 (true), isPrime(18)=0 (false) -- pass
-  - Test 15: 8 primes (2,3,5,7,11,13,17,19) - prints last prime - fail
+  - Test 15: 8 primes (2,3,5,7,11,13,17,19) - pass
   - Test 16: 5, 4, 3, 2, 1 -- pass
   - Test 17: 24, 10, 9 -- pass
   - Test 18: 1 (true) -- pass
@@ -20,7 +20,7 @@
   - Test 20: 55, 225 -- pass
   - Test 21: 6, 3 -- pass
   - Test 22: 12, 4 -- pass
-  - Test 23: 13 -- fail (87)
+  - Test 23: 87 -- pass
   - Test 24: 100, 60 -- pass
   - Test 25: 10 -- pass
   - Final marker: 999 -- pass
