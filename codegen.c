@@ -11,6 +11,7 @@ FILE* output;
 int tempReg = 0;
 char* currentFunctionType = NULL;
 int currentFunctionPrologueSize = 0;  // Track how much space was allocated in prologue
+int stackAdjustment = 0;  // Track dynamic stack pushes during expression evaluation
 
 /* ===== NEW: WHEN LOOP FEATURE ===== */
 /* Stack for tracking nested when loop end labels */
@@ -153,6 +154,29 @@ int isExprString(ASTNode* node) {
 
 void genExpr(ASTNode* node);
 
+// Helper function to check if an expression contains function calls
+// Function calls can reset tempReg, so we need to save registers
+int containsFunctionCall(ASTNode* node) {
+    if (!node) return 0;
+
+    switch(node->type) {
+        case NODE_FUNC_CALL:
+            return 1;  // This is a function call
+        case NODE_BINOP:
+            return containsFunctionCall(node->data.binop.left) ||
+                   containsFunctionCall(node->data.binop.right);
+        case NODE_UNARYOP:
+            return containsFunctionCall(node->data.unaryop.operand);
+        case NODE_ARRAY_ACCESS:
+            return containsFunctionCall(node->data.array_access.index);
+        case NODE_ARRAY_2D_ACCESS:
+            return containsFunctionCall(node->data.array_2d_access.indexX) ||
+                   containsFunctionCall(node->data.array_2d_access.indexY);
+        default:
+            return 0;  // Literals, variables, etc. don't contain function calls
+    }
+}
+
 
 void genExpr(ASTNode* node) {
     if (!node) {
@@ -211,11 +235,13 @@ void genExpr(ASTNode* node) {
                 }
             } else {
                 // Local variable - use stack-relative addressing
+                // FIX: Adjust offset for any dynamic stack pushes
+                int adjustedOffset = offset + stackAdjustment;
                 if (type && strcmp(type, "float") == 0) {
-                    fprintf(output, "    lwc1 $f0, %d($sp)\n", offset);
+                    fprintf(output, "    lwc1 $f0, %d($sp)\n", adjustedOffset);
                     tempReg = 0;
                 } else {
-                    fprintf(output, "    lw $t%d, %d($sp)\n", getNextTemp(), offset);
+                    fprintf(output, "    lw $t%d, %d($sp)\n", getNextTemp(), adjustedOffset);
                 }
             }
             /* ===== END: GLOBAL VARIABLES SUPPORT ===== */
@@ -283,43 +309,72 @@ void genExpr(ASTNode* node) {
                 tempReg = 0;
             } else {
                 int leftReg, rightReg;
+                int needsSave = containsFunctionCall(node->data.binop.right);
+
+                // Evaluate left operand
                 genExpr(node->data.binop.left);
                 leftReg = (tempReg > 0) ? tempReg - 1 : 0;
-                genExpr(node->data.binop.right);
-                rightReg = (tempReg > 0) ? tempReg - 1 : 0;
+
+                int resultReg, savedLeftReg;
+                if (needsSave) {
+                    // FIX: Push left operand to stack to preserve across recursive calls
+                    // Track the stack adjustment so variable loads use correct offsets
+                    fprintf(output, "    addi $sp, $sp, -4\n");
+                    fprintf(output, "    sw $t%d, 0($sp)     # Save left operand\n", leftReg);
+                    stackAdjustment += 4;  // Track that we pushed 4 bytes
+
+                    // Evaluate right operand (may include recursive calls)
+                    genExpr(node->data.binop.right);
+                    rightReg = (tempReg > 0) ? tempReg - 1 : 0;
+
+                    // Pop left operand from stack
+                    savedLeftReg = (rightReg == 0) ? 1 : 0;  // Use different register
+                    fprintf(output, "    lw $t%d, 0($sp)     # Restore left operand\n", savedLeftReg);
+                    fprintf(output, "    addi $sp, $sp, 4\n");
+                    stackAdjustment -= 4;  // Track that we popped 4 bytes
+                    resultReg = savedLeftReg;
+                } else {
+                    // No save needed - evaluate right operand
+                    genExpr(node->data.binop.right);
+                    rightReg = (tempReg > 0) ? tempReg - 1 : 0;
+
+                    // Left is still in leftReg
+                    savedLeftReg = leftReg;
+                    resultReg = leftReg;
+                }
 
                 // Arithmetic operators
                 if (node->data.binop.op == OP_ADD) {
-                    fprintf(output, "    add $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    fprintf(output, "    add $t%d, $t%d, $t%d\n", resultReg, savedLeftReg, rightReg);
                 } else if (node->data.binop.op == OP_SUB) {
-                fprintf(output, "    sub $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    fprintf(output, "    sub $t%d, $t%d, $t%d\n", resultReg, savedLeftReg, rightReg);
                 } else if (node->data.binop.op == OP_MUL) {
-                    fprintf(output, "    mul $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    fprintf(output, "    mul $t%d, $t%d, $t%d\n", resultReg, savedLeftReg, rightReg);
                 } else if (node->data.binop.op == OP_DIV) {
-                    fprintf(output, "    div $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    fprintf(output, "    div $t%d, $t%d, $t%d\n", resultReg, savedLeftReg, rightReg);
                 }
                 // Comparison operators
                 else if (node->data.binop.op == OP_GT) {
-                    fprintf(output, "    sgt $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    fprintf(output, "    sgt $t%d, $t%d, $t%d\n", resultReg, savedLeftReg, rightReg);
                 } else if (node->data.binop.op == OP_LT) {
-                    fprintf(output, "    slt $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    fprintf(output, "    slt $t%d, $t%d, $t%d\n", resultReg, savedLeftReg, rightReg);
                 } else if (node->data.binop.op == OP_GTE) {
-                    fprintf(output, "    sge $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    fprintf(output, "    sge $t%d, $t%d, $t%d\n", resultReg, savedLeftReg, rightReg);
                 } else if (node->data.binop.op == OP_LTE) {
-                    fprintf(output, "    sle $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    fprintf(output, "    sle $t%d, $t%d, $t%d\n", resultReg, savedLeftReg, rightReg);
                 } else if (node->data.binop.op == OP_EQ) {
-                    fprintf(output, "    seq $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    fprintf(output, "    seq $t%d, $t%d, $t%d\n", resultReg, savedLeftReg, rightReg);
                 } else if (node->data.binop.op == OP_NEQ) {
-                    fprintf(output, "    sne $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    fprintf(output, "    sne $t%d, $t%d, $t%d\n", resultReg, savedLeftReg, rightReg);
                 } else if (node->data.binop.op == OP_AND) {
-                    fprintf(output, "    and $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    fprintf(output, "    and $t%d, $t%d, $t%d\n", resultReg, savedLeftReg, rightReg);
                 } else if (node->data.binop.op == OP_OR) {
-                    fprintf(output, "    or $t%d, $t%d, $t%d\n", leftReg, leftReg, rightReg);
+                    fprintf(output, "    or $t%d, $t%d, $t%d\n", resultReg, savedLeftReg, rightReg);
                 } else {
                     fprintf(stderr, "Error: unsupported binary op for int\n");
                     exit(1);
                 }
-                tempReg = leftReg + 1;
+                tempReg = resultReg + 1;
             }
             break;
         }
@@ -1145,10 +1200,17 @@ void genStmt(ASTNode* node) {
 
             // Generate implicit return for functions that don't have explicit return
             // (This handles void functions and functions that fall through)
-            fprintf(output, "    # Implicit return from function\n");
-            fprintf(output, "    lw $ra, 0($sp)\n");
-            fprintf(output, "    addi $sp, $sp, %d\n", currentFunctionPrologueSize);  // Deallocate ALL prologue space
-            fprintf(output, "    jr $ra\n");
+            // FIX: Special handling for main - exit instead of return
+            if (strcmp(node->data.func_decl.name, "main") == 0) {
+                fprintf(output, "    # Exit from main\n");
+                fprintf(output, "    li $v0, 10     # Syscall 10 = exit\n");
+                fprintf(output, "    syscall\n");
+            } else {
+                fprintf(output, "    # Implicit return from function\n");
+                fprintf(output, "    lw $ra, 0($sp)\n");
+                fprintf(output, "    addi $sp, $sp, %d\n", currentFunctionPrologueSize);  // Deallocate ALL prologue space
+                fprintf(output, "    jr $ra\n");
+            }
 
             // ✅ FIXED: Exit scope after function ends
             exitScope();
@@ -1170,7 +1232,9 @@ void genStmt(ASTNode* node) {
             if (type && strcmp(type, "float") == 0) {
                 fprintf(output, "    mov.s $f0, $f0\n");  // Float return value
             } else {
-                fprintf(output, "    move $v0, $t0\n");  // Integer return value
+                // FIX: Use the correct register that contains the result
+                int resultReg = (tempReg > 0) ? tempReg - 1 : 0;
+                fprintf(output, "    move $v0, $t%d\n", resultReg);  // Integer return value
             }
             fprintf(output, "    lw $ra, 0($sp)\n");
             fprintf(output, "    addi $sp, $sp, %d\n", currentFunctionPrologueSize);  // Deallocate ALL prologue space
@@ -1833,6 +1897,9 @@ void generateMIPS(ASTNode* root, const char* filename) {
         fprintf(output, ".globl %s\n", funcNames[i]);
     }
     fprintf(output, "\n");
+
+    // Note: QtSpim will automatically start execution at 'main' since it's .globl
+    // No explicit __start needed
 
     fprintf(stderr, "[DEBUG] Starting statement generation...\n");
     genStmt(root);
