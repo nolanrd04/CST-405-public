@@ -13,8 +13,12 @@ typedef struct {
     char* value;
 } ValueProp;
 
-ValueProp values[100];
+#define MAX_VALUE_PROPS 10000  /* Increased from 100 for large programs */
+ValueProp values[MAX_VALUE_PROPS];
 int valueCount = 0;
+
+/* Optimization statistics for performance tracking */
+OptimizationStats optStats = {0, 0, 0, 0, 0, 0, 0, 0};
 
 
 void initTAC() {
@@ -404,6 +408,11 @@ void generateTAC(ASTNode* node) {
                     break;
                 }
             }
+            
+            // Generate function body
+            if (node->data.func_decl.body) {
+                generateTAC(node->data.func_decl.body);
+            }
             break;
         }
         
@@ -696,11 +705,71 @@ void printTAC() {
     }
 }
 
-// Simple optimization: constant folding and copy propagation
+/* ========================================
+   OPTIMIZATION HELPER FUNCTIONS
+   ======================================== */
+
+/* Check if a string is a numeric constant */
+static int isNumeric(const char* str) {
+    if (!str || !*str) return 0;
+    if (*str == '-' || *str == '+') str++;  // Allow sign
+    while (*str) {
+        if (!isdigit(*str)) return 0;
+        str++;
+    }
+    return 1;
+}
+
+/* Check if a number is a power of 2 */
+static int isPowerOfTwo(int n) {
+    return (n > 0) && ((n & (n - 1)) == 0);
+}
+
+/* Get the log2 of a power of 2 (e.g., 8 -> 3, 16 -> 4) */
+static int log2Int(int n) {
+    int count = 0;
+    while (n > 1) {
+        n >>= 1;
+        count++;
+    }
+    return count;
+}
+
+/* Check if an instruction uses a specific temporary */
+static int instructionUsesTemp(TACInstr* instr, const char* temp) {
+    if (!instr || !temp) return 0;
+
+    if (instr->arg1 && strcmp(instr->arg1, temp) == 0) return 1;
+    if (instr->arg2 && strcmp(instr->arg2, temp) == 0) return 1;
+
+    return 0;
+}
+
+/* Count instruction list length */
+static int countInstructions(TACInstr* head) {
+    int count = 0;
+    while (head) {
+        count++;
+        head = head->next;
+    }
+    return count;
+}
+
+// Enhanced optimization: constant folding, copy propagation, algebraic simplification, and strength reduction
 void optimizeTAC() {
     TACInstr* curr = tacList.head;
     int valueCount = 0;
-    
+
+    /* Reset optimization statistics */
+    optStats.constantFolds = 0;
+    optStats.algebraicSimplifications = 0;
+    optStats.deadCodeEliminations = 0;
+    optStats.strengthReductions = 0;
+    optStats.commonSubexprEliminated = 0;
+    optStats.copyPropagations = 0;
+    optStats.instructionsBefore = countInstructions(tacList.head);
+    optStats.instructionsAfter = 0;
+
     while (curr) {
         TACInstr* newInstr = NULL;
 
@@ -730,78 +799,103 @@ void optimizeTAC() {
                 // Check if both operands are constants
                 char* left = curr->arg1;
                 char* right = curr->arg2;
-                
+
                 // Look up values in propagation table (search from most recent)
                 for (int i = valueCount - 1; i >= 0; i--) {
                     if (values[i].var && left && strcmp(values[i].var, left) == 0) {
                         left = values[i].value;
+                        optStats.copyPropagations++;
                         break;
                     }
                 }
                 for (int i = valueCount - 1; i >= 0; i--) {
                     if (values[i].var && right && strcmp(values[i].var, right) == 0) {
                         right = values[i].value;
+                        optStats.copyPropagations++;
                         break;
                     }
                 }
-                
+
                 // Constant folding
-                if (isdigit(left[0]) && isdigit(right[0])) {
+                if (isNumeric(left) && isNumeric(right)) {
                     int result = atoi(left) + atoi(right);
                     char* resultStr = malloc(20);
                     sprintf(resultStr, "%d", result);
-                    
+
                     // Store for propagation
-                    values[valueCount].var = strdup(curr->result);
-                    values[valueCount].value = resultStr;
-                    valueCount++;
-                    
+                    if (valueCount < MAX_VALUE_PROPS) {
+                        values[valueCount].var = strdup(curr->result);
+                        values[valueCount].value = resultStr;
+                        valueCount++;
+                    }
+
+                    optStats.constantFolds++;
                     newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
-                } else {
+                }
+                // Algebraic simplification: x + 0 = x
+                else if (isNumeric(right) && atoi(right) == 0) {
+                    optStats.algebraicSimplifications++;
+                    newInstr = createTAC(TAC_ASSIGN, left, NULL, curr->result);
+                }
+                // Algebraic simplification: 0 + x = x
+                else if (isNumeric(left) && atoi(left) == 0) {
+                    optStats.algebraicSimplifications++;
+                    newInstr = createTAC(TAC_ASSIGN, right, NULL, curr->result);
+                }
+                else {
                     newInstr = createTAC(TAC_ADD, left, right, curr->result);
                 }
                 break;
             }
 
-            case TAC_SUB: // DONE
+            case TAC_SUB:
             {
-                // Check if both operands are constants
                 char* left = curr->arg1;
                 char* right = curr->arg2;
-                
-                // Look up values in propagation table (search from most recent)
+
+                // Look up values in propagation table
                 for (int i = valueCount - 1; i >= 0; i--) {
                     if (values[i].var && left && strcmp(values[i].var, left) == 0) {
                         left = values[i].value;
+                        optStats.copyPropagations++;
                         break;
                     }
                 }
                 for (int i = valueCount - 1; i >= 0; i--) {
                     if (values[i].var && right && strcmp(values[i].var, right) == 0) {
                         right = values[i].value;
+                        optStats.copyPropagations++;
                         break;
                     }
                 }
-                
+
                 // Constant folding
-                if (isdigit(left[0]) && isdigit(right[0])) {
+                if (isNumeric(left) && isNumeric(right)) {
                     int result = atoi(left) - atoi(right);
                     char* resultStr = malloc(20);
                     sprintf(resultStr, "%d", result);
-                    
-                    // Store for propagation
-                    values[valueCount].var = strdup(curr->result);
-                    values[valueCount].value = resultStr;
-                    valueCount++;
-                    
+
+                    if (valueCount < MAX_VALUE_PROPS) {
+                        values[valueCount].var = strdup(curr->result);
+                        values[valueCount].value = resultStr;
+                        valueCount++;
+                    }
+
+                    optStats.constantFolds++;
                     newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
-                } else {
+                }
+                // Algebraic simplification: x - 0 = x
+                else if (isNumeric(right) && atoi(right) == 0) {
+                    optStats.algebraicSimplifications++;
+                    newInstr = createTAC(TAC_ASSIGN, left, NULL, curr->result);
+                }
+                else {
                     newInstr = createTAC(TAC_SUB, left, right, curr->result);
                 }
                 break;
             }
 
-            case TAC_MUL: // DONE
+            case TAC_MUL:
             {
                 char* left = curr->arg1;
                 char* right = curr->arg2;
@@ -810,35 +904,65 @@ void optimizeTAC() {
                 for (int i = valueCount - 1; i >= 0; i--) {
                     if (values[i].var && left && strcmp(values[i].var, left) == 0) {
                         left = values[i].value;
+                        optStats.copyPropagations++;
                         break;
                     }
                 }
                 for (int i = valueCount - 1; i >= 0; i--) {
                     if (values[i].var && right && strcmp(values[i].var, right) == 0) {
                         right = values[i].value;
+                        optStats.copyPropagations++;
                         break;
                     }
                 }
 
                 // Constant folding
-                if (isdigit(left[0]) && isdigit(right[0])) {
+                if (isNumeric(left) && isNumeric(right)) {
                     int result = atoi(left) * atoi(right);
                     char* resultStr = malloc(20);
                     sprintf(resultStr, "%d", result);
 
-                    // Store for propagation
-                    values[valueCount].var = strdup(curr->result);
-                    values[valueCount].value = resultStr;
-                    valueCount++;
+                    if (valueCount < MAX_VALUE_PROPS) {
+                        values[valueCount].var = strdup(curr->result);
+                        values[valueCount].value = resultStr;
+                        valueCount++;
+                    }
 
+                    optStats.constantFolds++;
                     newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
-                } else {
+                }
+                // Algebraic simplification: x * 0 = 0
+                else if ((isNumeric(right) && atoi(right) == 0) || (isNumeric(left) && atoi(left) == 0)) {
+                    optStats.algebraicSimplifications++;
+                    newInstr = createTAC(TAC_ASSIGN, "0", NULL, curr->result);
+                }
+                // Algebraic simplification: x * 1 = x
+                else if (isNumeric(right) && atoi(right) == 1) {
+                    optStats.algebraicSimplifications++;
+                    newInstr = createTAC(TAC_ASSIGN, left, NULL, curr->result);
+                }
+                // Algebraic simplification: 1 * x = x
+                else if (isNumeric(left) && atoi(left) == 1) {
+                    optStats.algebraicSimplifications++;
+                    newInstr = createTAC(TAC_ASSIGN, right, NULL, curr->result);
+                }
+                // Strength reduction: x * 2 = x + x
+                else if (isNumeric(right) && atoi(right) == 2) {
+                    optStats.strengthReductions++;
+                    newInstr = createTAC(TAC_ADD, left, left, curr->result);
+                }
+                // Strength reduction: 2 * x = x + x
+                else if (isNumeric(left) && atoi(left) == 2) {
+                    optStats.strengthReductions++;
+                    newInstr = createTAC(TAC_ADD, right, right, curr->result);
+                }
+                else {
                     newInstr = createTAC(TAC_MUL, left, right, curr->result);
                 }
                 break;
             }
 
-            case TAC_DIV: // DONE
+            case TAC_DIV:
             {
                 char* left = curr->arg1;
                 char* right = curr->arg2;
@@ -847,29 +971,44 @@ void optimizeTAC() {
                 for (int i = valueCount - 1; i >= 0; i--) {
                     if (values[i].var && left && strcmp(values[i].var, left) == 0) {
                         left = values[i].value;
+                        optStats.copyPropagations++;
                         break;
                     }
                 }
                 for (int i = valueCount - 1; i >= 0; i--) {
                     if (values[i].var && right && strcmp(values[i].var, right) == 0) {
                         right = values[i].value;
+                        optStats.copyPropagations++;
                         break;
                     }
                 }
 
                 // Constant folding
-                if (isdigit(left[0]) && isdigit(right[0]) && atoi(right) != 0) {
+                if (isNumeric(left) && isNumeric(right) && atoi(right) != 0) {
                     int result = atoi(left) / atoi(right);
                     char* resultStr = malloc(20);
                     sprintf(resultStr, "%d", result);
 
-                    // Store for propagation
-                    values[valueCount].var = strdup(curr->result);
-                    values[valueCount].value = resultStr;
-                    valueCount++;
+                    if (valueCount < MAX_VALUE_PROPS) {
+                        values[valueCount].var = strdup(curr->result);
+                        values[valueCount].value = resultStr;
+                        valueCount++;
+                    }
 
+                    optStats.constantFolds++;
                     newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
-                } else {
+                }
+                // Algebraic simplification: x / 1 = x
+                else if (isNumeric(right) && atoi(right) == 1) {
+                    optStats.algebraicSimplifications++;
+                    newInstr = createTAC(TAC_ASSIGN, left, NULL, curr->result);
+                }
+                // Algebraic simplification: 0 / x = 0 (x != 0)
+                else if (isNumeric(left) && atoi(left) == 0 && !(isNumeric(right) && atoi(right) == 0)) {
+                    optStats.algebraicSimplifications++;
+                    newInstr = createTAC(TAC_ASSIGN, "0", NULL, curr->result);
+                }
+                else {
                     newInstr = createTAC(TAC_DIV, left, right, curr->result);
                 }
                 break;
@@ -888,9 +1027,11 @@ void optimizeTAC() {
                 }
     
                 // Store for propagation
-                values[valueCount].var = strdup(curr->result);
-                values[valueCount].value = value ? strdup(value) : strdup("0");
-                valueCount++;
+                if (valueCount < MAX_VALUE_PROPS) {
+                    values[valueCount].var = strdup(curr->result);
+                    values[valueCount].value = value ? strdup(value) : strdup("0");
+                    valueCount++;
+                }
     
                 newInstr = createTAC(TAC_ASSIGN, value, NULL, curr->result);
                 break;
@@ -899,77 +1040,87 @@ void optimizeTAC() {
             case TAC_AND: {
                 char* left = propagateValue(curr->arg1);
                 char* right = propagateValue(curr->arg2);
-                
+
                 /* Constant folding for boolean AND */
                 if (isdigit(left[0]) && isdigit(right[0])) {
                     int result = (atoi(left) != 0) && (atoi(right) != 0);
                     char* resultStr = malloc(20);
                     sprintf(resultStr, "%d", result);
-                    
-                    values[valueCount].var = strdup(curr->result);
-                    values[valueCount].value = resultStr;
-                    valueCount++;
-                    
+
+                    if (valueCount < MAX_VALUE_PROPS) {
+                        values[valueCount].var = strdup(curr->result);
+                        values[valueCount].value = resultStr;
+                        valueCount++;
+                    }
+
+                    optStats.constantFolds++;
                     newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
                 } else {
                     newInstr = createTAC(TAC_AND, left, right, curr->result);
                 }
                 break;
             }
-            
+
             case TAC_OR: {
                 char* left = propagateValue(curr->arg1);
                 char* right = propagateValue(curr->arg2);
-                
+
                 /* Constant folding for boolean OR */
                 if (isdigit(left[0]) && isdigit(right[0])) {
                     int result = (atoi(left) != 0) || (atoi(right) != 0);
                     char* resultStr = malloc(20);
                     sprintf(resultStr, "%d", result);
-                    
-                    values[valueCount].var = strdup(curr->result);
-                    values[valueCount].value = resultStr;
-                    valueCount++;
-                    
+
+                    if (valueCount < MAX_VALUE_PROPS) {
+                        values[valueCount].var = strdup(curr->result);
+                        values[valueCount].value = resultStr;
+                        valueCount++;
+                    }
+
+                    optStats.constantFolds++;
                     newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
                 } else {
                     newInstr = createTAC(TAC_OR, left, right, curr->result);
                 }
                 break;
             }
-            
+
             case TAC_NOT: {
                 char* operand = propagateValue(curr->arg1);
-                
+
                 /* Constant folding for NOT */
                 if (isdigit(operand[0])) {
                     int result = !(atoi(operand));
                     char* resultStr = malloc(20);
                     sprintf(resultStr, "%d", result);
-                    
-                    values[valueCount].var = strdup(curr->result);
-                    values[valueCount].value = resultStr;
-                    valueCount++;
-                    
+
+                    if (valueCount < MAX_VALUE_PROPS) {
+                        values[valueCount].var = strdup(curr->result);
+                        values[valueCount].value = resultStr;
+                        valueCount++;
+                    }
+
+                    optStats.constantFolds++;
                     newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
                 } else {
                     newInstr = createTAC(TAC_NOT, operand, NULL, curr->result);
                 }
                 break;
             }
-            
-            case TAC_PRINT: // DONE
+
+            case TAC_PRINT:
             {
                 char* value = curr->arg1;
-                
+
                 // Look up value in propagation table
                 for (int i = valueCount - 1; i >= 0; i--) {  // Search from most recent
-                    if (strcmp(values[i].var, value) == 0) {
+                    if (values[i].var && strcmp(values[i].var, value) == 0) {
                         value = values[i].value;
+                        optStats.copyPropagations++;
                         break;
                     }
                 }
-                
+
                 newInstr = createTAC(TAC_PRINT, value, NULL, NULL);
                 break;
             }
@@ -1075,13 +1226,13 @@ void optimizeTAC() {
             {
                 char* left = propagateValue(curr->arg1);
                 char* right = propagateValue(curr->arg2);
-                
+
                 // Constant folding for comparison operators
                 if (isdigit(left[0]) && isdigit(right[0])) {
                     int leftVal = atoi(left);
                     int rightVal = atoi(right);
                     int result;
-                    
+
                     switch(curr->op) {
                         case TAC_EQ:  result = (leftVal == rightVal); break;
                         case TAC_NEQ: result = (leftVal != rightVal); break;
@@ -1091,14 +1242,17 @@ void optimizeTAC() {
                         case TAC_GTE: result = (leftVal >= rightVal); break;
                         default: result = 0; break;
                     }
-                    
+
                     char* resultStr = malloc(20);
                     sprintf(resultStr, "%d", result);
-                    
-                    values[valueCount].var = strdup(curr->result);
-                    values[valueCount].value = resultStr;
-                    valueCount++;
-                    
+
+                    if (valueCount < MAX_VALUE_PROPS) {
+                        values[valueCount].var = strdup(curr->result);
+                        values[valueCount].value = resultStr;
+                        valueCount++;
+                    }
+
+                    optStats.constantFolds++;
                     newInstr = createTAC(TAC_ASSIGN, resultStr, NULL, curr->result);
                 } else {
                     // Can't optimize, pass through original comparison
@@ -1158,9 +1312,41 @@ void optimizeTAC() {
         if (newInstr) {
             appendOptimizedTAC(newInstr);
         }
-        
+
         curr = curr->next;
     }
+
+    /* Count optimized instructions */
+    optStats.instructionsAfter = countInstructions(optimizedList.head);
+}
+
+/* Print optimization statistics for documentation */
+void printOptimizationStats() {
+    printf("\n");
+    printf("╔════════════════════════════════════════════════════════════╗\n");
+    printf("║          TAC OPTIMIZATION STATISTICS                       ║\n");
+    printf("╠════════════════════════════════════════════════════════════╣\n");
+    printf("║ Instructions Before:          %4d                       ║\n", optStats.instructionsBefore);
+    printf("║ Instructions After:           %4d                       ║\n", optStats.instructionsAfter);
+    printf("║ Instructions Eliminated:      %4d (%.1f%%)               ║\n",
+           optStats.instructionsBefore - optStats.instructionsAfter,
+           optStats.instructionsBefore > 0 ?
+           100.0 * (optStats.instructionsBefore - optStats.instructionsAfter) / optStats.instructionsBefore : 0.0);
+    printf("╠════════════════════════════════════════════════════════════╣\n");
+    printf("║ OPTIMIZATION BREAKDOWN:                                    ║\n");
+    printf("║ • Constant Folds:             %4d                       ║\n", optStats.constantFolds);
+    printf("║ • Algebraic Simplifications:  %4d                       ║\n", optStats.algebraicSimplifications);
+    printf("║ • Strength Reductions:        %4d                       ║\n", optStats.strengthReductions);
+    printf("║ • Copy Propagations:          %4d                       ║\n", optStats.copyPropagations);
+    printf("║ • Dead Code Eliminations:     %4d                       ║\n", optStats.deadCodeEliminations);
+    printf("║ • Common Subexpr Eliminated:  %4d                       ║\n", optStats.commonSubexprEliminated);
+    printf("╠════════════════════════════════════════════════════════════╣\n");
+    printf("║ Total Optimizations Applied:  %4d                       ║\n",
+           optStats.constantFolds + optStats.algebraicSimplifications +
+           optStats.strengthReductions + optStats.copyPropagations +
+           optStats.deadCodeEliminations + optStats.commonSubexprEliminated);
+    printf("╚════════════════════════════════════════════════════════════╝\n");
+    printf("\n");
 }
 
 void printOptimizedTAC() {

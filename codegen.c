@@ -5,6 +5,16 @@
 #include "symtab.h"
 #include "tac.h"
 
+/* DEBUG OUTPUT CONTROL - Set to 0 to disable all debug messages */
+#define ENABLE_DEBUG_OUTPUT 0
+
+/* Debug print macro - only prints if ENABLE_DEBUG_OUTPUT is 1 */
+#if ENABLE_DEBUG_OUTPUT
+    #define DEBUG_PRINT(...) fprintf(stderr, __VA_ARGS__)
+#else
+    #define DEBUG_PRINT(...) do {} while(0)
+#endif
+
 extern TACList optimizedList;
 
 FILE* output;
@@ -180,11 +190,11 @@ int containsFunctionCall(ASTNode* node) {
 
 void genExpr(ASTNode* node) {
     if (!node) {
-        fprintf(stderr, "[DEBUG] genExpr: NULL node\n");
+        DEBUG_PRINT("[DEBUG] genExpr: NULL node\n");
         return;
     }
 
-    fprintf(stderr, "[DEBUG] genExpr: Processing node type %d\n", node->type);
+    DEBUG_PRINT("[DEBUG] genExpr: Processing node type %d\n", node->type);
 
     switch(node->type) {
         case NODE_NUM:
@@ -643,21 +653,21 @@ void genExpr(ASTNode* node) {
 
 void genStmt(ASTNode* node) {
     if (!node) {
-        fprintf(stderr, "[DEBUG] genStmt: NULL node\n");
+        DEBUG_PRINT("[DEBUG] genStmt: NULL node\n");
         return;
     }
 
-    fprintf(stderr, "[DEBUG] genStmt: Processing node type %d\n", node->type);
+    DEBUG_PRINT("[DEBUG] genStmt: Processing node type %d\n", node->type);
 
     switch(node->type) {
         case NODE_DECL: {
-            fprintf(stderr, "[DEBUG] NODE_DECL: var=%s, scope=%d\n",
+            DEBUG_PRINT("[DEBUG] NODE_DECL: var=%s, scope=%d\n",
                     node->data.decl.varName, getCurrentScope());
 
             // Check if this is a global declaration (scope 0)
             if (getCurrentScope() == 0) {
                 // Global variables: skip - they're not allocated on the stack
-                fprintf(stderr, "[DEBUG] Skipping global variable: %s (globals not supported on stack)\n",
+                DEBUG_PRINT("[DEBUG] Skipping global variable: %s (globals not supported on stack)\n",
                         node->data.decl.varName);
                 // Don't add to symbol table - globals aren't tracked in our simple implementation
             } else {
@@ -900,7 +910,7 @@ void genStmt(ASTNode* node) {
             break;
             
         case NODE_ARRAY_DECL: {
-            fprintf(stderr, "[DEBUG] NODE_ARRAY_DECL: array=%s, size=%d, type=%s, scope=%d\n",
+            DEBUG_PRINT("[DEBUG] NODE_ARRAY_DECL: array=%s, size=%d, type=%s, scope=%d\n",
                     node->data.array_decl.name,
                     node->data.array_decl.size,
                     node->data.array_decl.type ? node->data.array_decl.type : "NULL",
@@ -909,14 +919,14 @@ void genStmt(ASTNode* node) {
             // Check if this is a global declaration (scope 0)
             if (getCurrentScope() == 0) {
                 // Global arrays: skip - they're not allocated on the stack
-                fprintf(stderr, "[DEBUG] Skipping global array: %s (globals not supported on stack)\n",
+                DEBUG_PRINT("[DEBUG] Skipping global array: %s (globals not supported on stack)\n",
                         node->data.array_decl.name);
                 // Don't add to symbol table - globals aren't tracked in our simple implementation
             } else {
                 // Local array: allocate on stack
-                fprintf(stderr, "[DEBUG] About to call addArrayVar...\n");
+                DEBUG_PRINT("[DEBUG] About to call addArrayVar...\n");
                 int offset = addArrayVar(node->data.array_decl.name, node->data.array_decl.size, node->data.array_decl.type);
-                fprintf(stderr, "[DEBUG] addArrayVar returned offset: %d\n", offset);
+                DEBUG_PRINT("[DEBUG] addArrayVar returned offset: %d\n", offset);
                 if (offset == -1) {
                     fprintf(stderr, "Error: Array %s already declared\n", node->data.array_decl.name);
                     exit(1);
@@ -1095,7 +1105,7 @@ void genStmt(ASTNode* node) {
         }
 
         case NODE_FUNC_DECL: {
-            fprintf(stderr, "[DEBUG] Processing function: %s\n", node->data.func_decl.name);
+            DEBUG_PRINT("[DEBUG] Processing function: %s\n", node->data.func_decl.name);
             fprintf(output, "\n%s:\n", node->data.func_decl.name);
             fprintf(output, "    # Function: %s (Scope Level: %d)\n",
                     node->data.func_decl.name, getCurrentScope() + 1);
@@ -1132,7 +1142,7 @@ void genStmt(ASTNode* node) {
             // This accounts for the space allocated in the prologue
             ASTNode* param = node->data.func_decl.params;
 
-            fprintf(stderr, "[DEBUG] Loading parameters for function %s\n", node->data.func_decl.name);
+            DEBUG_PRINT("[DEBUG] Loading parameters for function %s\n", node->data.func_decl.name);
 
             // First, flatten the parameter list into an array (using a helper recursive function)
             ASTNode* paramList[20];  // Max 20 params
@@ -1141,12 +1151,12 @@ void genStmt(ASTNode* node) {
             // Recursive helper to extract all NODE_PARAM nodes from the nested structure
             void flattenParams(ASTNode* p) {
                 if (!p) return;
-                fprintf(stderr, "[DEBUG] flattenParams: node type %d\n", p->type);
+                DEBUG_PRINT("[DEBUG] flattenParams: node type %d\n", p->type);
 
                 if (p->type == NODE_PARAM) {
                     // Base case: found an actual parameter
                     paramList[totalParams++] = p;
-                    fprintf(stderr, "[DEBUG] Added param, total: %d\n", totalParams);
+                    DEBUG_PRINT("[DEBUG] Added param, total: %d\n", totalParams);
                 } else if (p->type == NODE_PARAM_LIST) {
                     // Recursive case: traverse the list
                     flattenParams(p->data.param_list.param);  // Process the param field (could be another list or a param)
@@ -1155,17 +1165,17 @@ void genStmt(ASTNode* node) {
             }
 
             flattenParams(param);
-            fprintf(stderr, "[DEBUG] Found %d parameters\n", totalParams);
+            DEBUG_PRINT("[DEBUG] Found %d parameters\n", totalParams);
 
             // Process parameters in order
             for (int i = 0; i < totalParams; i++) {
                 ASTNode* paramNode = paramList[i];
-                fprintf(stderr, "[DEBUG] Processing param %d\n", i);
+                DEBUG_PRINT("[DEBUG] Processing param %d\n", i);
 
                 if (paramNode->type == NODE_PARAM) {
                     char* paramName = paramNode->data.param.name;
                     char* paramType = paramNode->data.param.type;
-                    fprintf(stderr, "[DEBUG] Processing parameter: %s (type: %s)\n", paramName, paramType);
+                    DEBUG_PRINT("[DEBUG] Processing parameter: %s (type: %s)\n", paramName, paramType);
                     int offset = addVar(paramName, paramType);
 
                     // Parameters are stored by caller, but after prologue we've moved $sp
@@ -1190,14 +1200,14 @@ void genStmt(ASTNode* node) {
                                 offset, paramName, offset);
                     }
                 } else {
-                    fprintf(stderr, "[DEBUG] ERROR: paramNode type is not NODE_PARAM: %d\n", paramNode->type);
+                    DEBUG_PRINT("[DEBUG] ERROR: paramNode type is not NODE_PARAM: %d\n", paramNode->type);
                 }
             }
 
             // Generate function body
-            fprintf(stderr, "[DEBUG] Generating function body for %s\n", node->data.func_decl.name);
+            DEBUG_PRINT("[DEBUG] Generating function body for %s\n", node->data.func_decl.name);
             genStmt(node->data.func_decl.body);
-            fprintf(stderr, "[DEBUG] Finished generating function body for %s\n", node->data.func_decl.name);
+            DEBUG_PRINT("[DEBUG] Finished generating function body for %s\n", node->data.func_decl.name);
 
             // Generate implicit return for functions that don't have explicit return
             // (This handles void functions and functions that fall through)
@@ -1780,7 +1790,7 @@ void collectGlobalVars(ASTNode* node) {
         case NODE_DECL:
             // Global variable declaration at scope 0
             if (getCurrentScope() == 0) {
-                fprintf(stderr, "[DEBUG] Found global variable: %s\n", node->data.decl.varName);
+                DEBUG_PRINT("[DEBUG] Found global variable: %s\n", node->data.decl.varName);
                 fprintf(output, "%s: .word 0\n", node->data.decl.varName);
                 addVar(node->data.decl.varName, node->data.decl.varType);
             }
@@ -1789,7 +1799,7 @@ void collectGlobalVars(ASTNode* node) {
         case NODE_DECL_ASSIGN:
             // Global variable with initialization at scope 0
             if (getCurrentScope() == 0) {
-                fprintf(stderr, "[DEBUG] Found global variable with init: %s\n", node->data.declAssign.id);
+                DEBUG_PRINT("[DEBUG] Found global variable with init: %s\n", node->data.declAssign.id);
                 // For now, initialize to 0 (proper initialization would require constant folding)
                 fprintf(output, "%s: .word 0\n", node->data.declAssign.id);
                 addVar(node->data.declAssign.id, node->data.declAssign.type);
@@ -1800,7 +1810,7 @@ void collectGlobalVars(ASTNode* node) {
             // Global array declaration at scope 0
             if (getCurrentScope() == 0) {
                 int size = node->data.array_decl.size;
-                fprintf(stderr, "[DEBUG] Found global array: %s[%d]\n", node->data.array_decl.name, size);
+                DEBUG_PRINT("[DEBUG] Found global array: %s[%d]\n", node->data.array_decl.name, size);
                 fprintf(output, "%s: .space %d\n", node->data.array_decl.name, size * 4);
                 addArrayVar(node->data.array_decl.name, size, node->data.array_decl.type);
             }
@@ -1846,25 +1856,25 @@ void collectGlobalFunctions(ASTNode* node, char** funcNames, int* funcCount) {
 }
 
 void generateMIPS(ASTNode* root, const char* filename) {
-    fprintf(stderr, "[DEBUG] ===== Starting MIPS Code Generation =====\n");
+    DEBUG_PRINT("[DEBUG] ===== Starting MIPS Code Generation =====\n");
     output = fopen(filename, "w");
     if (!output) {
         fprintf(stderr, "Cannot open output file %s\n", filename);
         exit(1);
     }
 
-    fprintf(stderr, "[DEBUG] Output file opened: %s\n", filename);
+    DEBUG_PRINT("[DEBUG] Output file opened: %s\n", filename);
     initSymTab();
-    fprintf(stderr, "[DEBUG] Symbol table initialized\n");
+    DEBUG_PRINT("[DEBUG] Symbol table initialized\n");
 
     /* ===== NEW: STRING LITERAL SUPPORT ===== */
     /* Pre-pass: collect all string literals before code generation */
-    fprintf(stderr, "[DEBUG] Collecting strings...\n");
+    DEBUG_PRINT("[DEBUG] Collecting strings...\n");
     collectStrings(root);
-    fprintf(stderr, "[DEBUG] String collection complete. Found %d strings\n", stringCount);
+    DEBUG_PRINT("[DEBUG] String collection complete. Found %d strings\n", stringCount);
     /* ===== END: STRING LITERAL SUPPORT ===== */
 
-    fprintf(stderr, "[DEBUG] Writing .data section\n");
+    DEBUG_PRINT("[DEBUG] Writing .data section\n");
     fprintf(output, ".data\n");
     fprintf(output, "true_str: .asciiz \"true\"\n");
     fprintf(output, "false_str: .asciiz \"false\"\n");
@@ -1878,24 +1888,24 @@ void generateMIPS(ASTNode* root, const char* filename) {
 
     /* ===== NEW: GLOBAL VARIABLES SUPPORT ===== */
     /* Pre-pass: collect global variable declarations */
-    fprintf(stderr, "[DEBUG] Collecting global variables...\n");
+    DEBUG_PRINT("[DEBUG] Collecting global variables...\n");
     collectGlobalVars(root);
-    fprintf(stderr, "[DEBUG] Global variable collection complete\n");
+    DEBUG_PRINT("[DEBUG] Global variable collection complete\n");
     /* ===== END: GLOBAL VARIABLES SUPPORT ===== */
 
     fprintf(output, "\n.text\n");
 
     // Collect all global function names
-    fprintf(stderr, "[DEBUG] Collecting global functions...\n");
+    DEBUG_PRINT("[DEBUG] Collecting global functions...\n");
     char* funcNames[100];
     int funcCount = 0;
     collectGlobalFunctions(root, funcNames, &funcCount);
-    fprintf(stderr, "[DEBUG] Found %d functions\n", funcCount);
+    DEBUG_PRINT("[DEBUG] Found %d functions\n", funcCount);
 
     // Output .globl directives for all functions
-    fprintf(stderr, "[DEBUG] Writing .globl directives\n");
+    DEBUG_PRINT("[DEBUG] Writing .globl directives\n");
     for (int i = 0; i < funcCount; i++) {
-        fprintf(stderr, "[DEBUG] .globl %s\n", funcNames[i]);
+        DEBUG_PRINT("[DEBUG] .globl %s\n", funcNames[i]);
         fprintf(output, ".globl %s\n", funcNames[i]);
     }
     fprintf(output, "\n");
@@ -1903,11 +1913,11 @@ void generateMIPS(ASTNode* root, const char* filename) {
     // Note: QtSpim will automatically start execution at 'main' since it's .globl
     // No explicit __start needed
 
-    fprintf(stderr, "[DEBUG] Starting statement generation...\n");
+    DEBUG_PRINT("[DEBUG] Starting statement generation...\n");
     genStmt(root);
-    fprintf(stderr, "[DEBUG] Statement generation complete!\n");
+    DEBUG_PRINT("[DEBUG] Statement generation complete!\n");
 
-    fprintf(stderr, "[DEBUG] Closing output file\n");
+    DEBUG_PRINT("[DEBUG] Closing output file\n");
     fclose(output);
-    fprintf(stderr, "[DEBUG] ===== MIPS Code Generation Complete =====\n");
+    DEBUG_PRINT("[DEBUG] ===== MIPS Code Generation Complete =====\n");
 }

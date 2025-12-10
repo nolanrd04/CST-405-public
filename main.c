@@ -28,12 +28,14 @@ void log_printf(const char* format, ...) {
     va_start(args, format);
     vprintf(format, args);
     va_end(args);
+    fflush(stdout);  /* Flush output immediately */
 
     /* Print to log file if enabled */
     if (log_file) {
         va_start(args, format);
         vfprintf(log_file, format, args);
         va_end(args);
+        fflush(log_file);  /* Flush log file immediately */
     }
 }
 
@@ -118,9 +120,12 @@ int main(int argc, char* argv[]) {
         log_printf("│ Applying optimizations:                                  │\n");
         log_printf("│ • Constant folding (evaluate compile-time expressions)   │\n");
         log_printf("│ • Copy propagation (replace variables with values)       │\n");
+        log_printf("│ • Algebraic simplification (x+0, x*1, x*0, etc.)         │\n");
+        log_printf("│ • Strength reduction (x*2 -> x+x)                        │\n");
         log_printf("└──────────────────────────────────────────────────────────┘\n");
         optimizeTAC();
         printOptimizedTAC();
+        printOptimizationStats();
         log_printf("\n");
 
         /* PHASE 5: Code Generation */
@@ -152,6 +157,8 @@ int main(int argc, char* argv[]) {
 
         /* Overall compilation time */
         end_benchmark(total_bench, "Total Compilation");
+        fflush(stdout);
+        fflush(stderr);
 
         /* Symbol table statistics */
         log_printf("\n=== Symbol Table Hash Table Statistics ===\n");
@@ -161,9 +168,13 @@ int main(int argc, char* argv[]) {
                    symtab.lookups > 0 ? (100.0 * symtab.collisions / symtab.lookups) : 0.0);
         log_printf("Variables stored: %d\n", symtab.count);
         log_printf("Hash table size: %d buckets\n", HASH_SIZE);
+        fflush(stdout);
+        fflush(stderr);
 
         /* String pool statistics */
         print_string_stats();
+        fflush(stdout);
+        fflush(stderr);
 
         log_printf("\n");
         free_benchmark(total_bench);

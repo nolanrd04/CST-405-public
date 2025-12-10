@@ -8,6 +8,16 @@
 #include <string.h>
 #include "symtab.h"
 
+/* DEBUG OUTPUT CONTROL - Set to 0 to disable all debug messages */
+#define ENABLE_DEBUG_OUTPUT 0
+
+/* Debug print macro - only prints if ENABLE_DEBUG_OUTPUT is 1 */
+#if ENABLE_DEBUG_OUTPUT
+    #define DEBUG_PRINT(...) printf(__VA_ARGS__)
+#else
+    #define DEBUG_PRINT(...) do {} while(0)
+#endif
+
 /* Global symbol table instance */
 SymbolTable symtab;
 
@@ -44,17 +54,17 @@ void enterScope(){
     /*Save current offset for when we exit this scope*/
     symtab.scopeOffsets[symtab.currentScope] = symtab.nextOffset;
 
-    printf("SCOPE = Entering scope %d (offset: %d)\n", symtab.currentScope, symtab.nextOffset);
+    DEBUG_PRINT("SCOPE = Entering scope %d (offset: %d)\n", symtab.currentScope, symtab.nextOffset);
 }
 
 /*Exit current scope (when leaving function or block)*/
 void exitScope(){
-    printf("SCOPE = Exiting scope %d\n", symtab.currentScope);
+    DEBUG_PRINT("SCOPE = Exiting scope %d\n", symtab.currentScope);
 
     /*Remove all variables declared in this scope from both array AND hash table*/
     int i = symtab.count - 1;
     while (i>= 0 && symtab.vars[i].scope >= symtab.currentScope){
-        printf("SCOPE = Removing variable %s from scope %d\n", symtab.vars[i].name, symtab.currentScope);
+        DEBUG_PRINT("SCOPE = Removing variable %s from scope %d\n", symtab.vars[i].name, symtab.currentScope);
 
         /* CRITICAL: Remove from hash table to avoid dangling pointers */
         unsigned int bucket = hash_symbol(symtab.vars[i].name);

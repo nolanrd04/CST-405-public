@@ -116,9 +116,22 @@ void generateParamTac(ASTNode* node, char* funcName);          /*Generate TAC fo
 void generateFuncCallTAC(ASTNode* node,char** resultTemp);     /* Generate TAC for function calls */
 void generateArgListTAC(ASTNode* node);                           /* Generate TAC for arguments */
 
+/* OPTIMIZATION STATISTICS TRACKING */
+typedef struct {
+    int constantFolds;           /* Number of constant folding optimizations */
+    int algebraicSimplifications; /* Number of algebraic simplifications (x+0, x*1, etc.) */
+    int deadCodeEliminations;    /* Number of dead code instructions removed */
+    int strengthReductions;      /* Number of strength reductions (x*2 -> x+x) */
+    int commonSubexprEliminated; /* Number of common subexpressions eliminated */
+    int copyPropagations;        /* Number of copy propagations */
+    int instructionsBefore;      /* Total instructions before optimization */
+    int instructionsAfter;       /* Total instructions after optimization */
+} OptimizationStats;
+
 /* TAC OPTIMIZATION AND OUTPUT */
 void printTAC();                                                   /* Display unoptimized TAC */
 void optimizeTAC();                                                /* Apply optimizations */
 void printOptimizedTAC();                                          /* Display optimized TAC */
+void printOptimizationStats();                                     /* Display optimization statistics */
 
 #endif

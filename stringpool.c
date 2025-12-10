@@ -68,15 +68,34 @@ char* intern_string(const char* str) {
 }
 
 void print_string_stats() {
-    printf("\n=== String Pool Statistics ===\n");
-    printf("Total requests: %d\n", string_pool.total_requests);
-    printf("Unique strings: %d\n", string_pool.unique_strings);
-    printf("Duplicates avoided: %d\n", string_pool.duplicates_avoided);
-    printf("Memory used: %.2f KB / %.2f KB\n",
+    extern FILE* log_file;  /* Declare external log_file */
+    
+    FILE* out = stdout;  /* Default to stdout */
+    
+    fprintf(out, "\n=== String Pool Statistics ===\n");
+    fprintf(out, "Total requests: %d\n", string_pool.total_requests);
+    fprintf(out, "Unique strings: %d\n", string_pool.unique_strings);
+    fprintf(out, "Duplicates avoided: %d\n", string_pool.duplicates_avoided);
+    fprintf(out, "Memory used: %.2f KB / %.2f KB\n",
            string_pool.pool_used / 1024.0,
            STRING_POOL_SIZE / 1024.0);
-    printf("Memory saved: ~%.2f KB\n",
+    fprintf(out, "Memory saved: ~%.2f KB\n",
            (string_pool.duplicates_avoided * 10) / 1024.0); /* Estimate */
+    
+    /* Also log to file if available */
+    if (log_file) {
+        fprintf(log_file, "\n=== String Pool Statistics ===\n");
+        fprintf(log_file, "Total requests: %d\n", string_pool.total_requests);
+        fprintf(log_file, "Unique strings: %d\n", string_pool.unique_strings);
+        fprintf(log_file, "Duplicates avoided: %d\n", string_pool.duplicates_avoided);
+        fprintf(log_file, "Memory used: %.2f KB / %.2f KB\n",
+               string_pool.pool_used / 1024.0,
+               STRING_POOL_SIZE / 1024.0);
+        fprintf(log_file, "Memory saved: ~%.2f KB\n",
+               (string_pool.duplicates_avoided * 10) / 1024.0);
+        fflush(log_file);
+    }
+    fflush(stdout);
 }
 
 void free_string_pool() {

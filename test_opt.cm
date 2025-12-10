@@ -1,0 +1,17 @@
+/* Simple test to verify optimization works */
+void main() {
+    int x;
+    int y;
+    int z;
+    
+    /* These should be optimized */
+    x = 2 + 3;      /* constant folding: 5 */
+    y = x * 1;      /* algebraic simplification */
+    z = y * 2;      /* strength reduction to y + y */
+    z = y + 0;      /* algebraic simplification */
+    z = 0 * 100;    /* algebraic simplification to 0 */
+    
+    output(x);
+    output(y);
+    output(z);
+}
