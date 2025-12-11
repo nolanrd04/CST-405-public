@@ -140,7 +140,7 @@ Optimizations applied during TAC processing:
 - Converts TAC to MIPS assembly language
 - Manages stack for local variables
 - Uses temporary registers (`$t0`-`$t7`)
-- Generates system calls for `output()` statements
+- Generates system calls for `println()` and `print()` statements
 
 **Generated MIPS features:**
 - Stack frame setup/teardown
@@ -167,8 +167,8 @@ int add(int a, int b) {
 }
 
 // Function with no parameters
-void printMessage(void) {
-    output(42);
+void printMessage() {
+    println(42);
 }
 
 // Recursive function
@@ -185,9 +185,9 @@ int factorial(int n) {
 ```c
 // If-else
 if (x > 5) {
-    output(1);
+    println(1);
 } else {
-    output(0);
+    println(0);
 }
 
 // While loop
@@ -201,19 +201,20 @@ while (i <= 10) {
 // Switch statement
 switch (choice) {
     case 1:
-        output(100);
+        println(100);
         break;
     case 2:
-        output(200);
+        println(200);
         break;
     default:
-        output(0);
+        println(0);
 }
 ```
 
 ### Built-in Functions
 ```c
-output(value);    // Print an integer value
+println(value);    // Print an integer value with newline
+print(string);     // Print a string (string literals only)
 ```
 
 ### Operators
@@ -238,6 +239,89 @@ a || b   // OR
 !a       // NOT
 ```
 
+### WHEN Loops
+
+The **WHEN loop** is an alternative looping construct that exits **when a condition becomes TRUE** (opposite of while loops which continue while a condition is TRUE).
+
+#### Basic Syntax
+
+```c
+when (exit_condition) {
+    // Loop body executes repeatedly
+    // while exit_condition is FALSE
+    // Exits when exit_condition becomes TRUE
+}
+```
+
+#### How It Works
+
+Unlike `while` loops that continue executing while a condition is **true**, `when` loops continue executing while the condition is **false** and exit when it becomes **true**.
+
+**Comparison:**
+- `while (x < 5)` - executes while x is less than 5, stops when x >= 5
+- `when (x >= 5)` - executes while x is less than 5, stops when x >= 5 (same result, inverted logic)
+
+#### With OR Branches
+
+The `when` loop supports multiple exit conditions using `or` branches:
+
+```c
+when (x == 10) {
+    println(x);
+} or (x > 15) {
+    println("x is too large");
+} or (x < 0) {
+    println("x is negative");
+}
+```
+
+The loop exits when **any** of the conditions becomes true.
+
+#### With ELSE Block
+
+An optional `else` block executes every iteration:
+
+```c
+int counter = 0;
+when (counter >= 5) {
+    println("Done!");
+} else {
+    println("Still going...");
+    counter = counter + 1;
+}
+```
+
+#### Break When Statement
+
+You can explicitly exit a when loop using `break when`:
+
+```c
+when (x >= 10) {
+    x = x + 1;
+    break when (x >= 5);  // Exit if x reaches 5
+}
+```
+
+#### Example: Countdown Loop
+
+```c
+void main() {
+    int x;
+    
+    x = 0;
+    
+    when (x >= 5) {
+        println("Done!");
+    } or (x < 5) {
+        println("Not yet!");
+        x = x + 1;
+        break when (x >= 5);
+    }
+    
+    println(x);  // Output: 5
+}
+```
+
 ---
 
 ## Example Programs
@@ -245,14 +329,14 @@ a || b   // OR
 ### Simple Arithmetic
 **File:** `test_opt.cm`
 ```c
-void main(void) {
+void main() {
     int x;
     int y;
     
     x = 2 + 3;      // Constant folding: becomes 5
     y = x * 1;      // Algebraic simplification: becomes x
-    output(x);
-    output(y);
+    println(x);
+    println(y);
 }
 ```
 
@@ -272,7 +356,7 @@ void main(void) {
     // Print array
     i = 0;
     while (i < 5) {
-        output(arr[i]);
+        println(arr[i]);
         i = i + 1;
     }
 }
@@ -289,7 +373,7 @@ int fibonacci(int n) {
 }
 
 void main(void) {
-    output(fibonacci(10));
+    println(fibonacci(10));
 }
 ```
 

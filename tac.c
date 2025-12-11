@@ -62,6 +62,21 @@ static char* propagateValue(const char* name) {
     return (char*)name;
 }
 
+// Propagate value and track if it changed (for accurate copy propagation counting)
+static char* propagateValueTracked(const char* name, int* wasPropagated) {
+    if (!name) return NULL;
+    for (int i = valueCount - 1; i >= 0; --i) {
+        if (values[i].var && strcmp(values[i].var, name) == 0) {
+            // Only count as propagation if the value is different from the original
+            if (strcmp(values[i].value, name) != 0) {
+                if (wasPropagated) *wasPropagated = 1;
+            }
+            return values[i].value;
+        }
+    }
+    return (char*)name;
+}
+
 void appendTAC(TACInstr* instr) {
     if (!tacList.head) {
         tacList.head = tacList.tail = instr;
@@ -755,10 +770,184 @@ static int countInstructions(TACInstr* head) {
     return count;
 }
 
+// Helper to check if a variable is used in the TAC list
+static int isVariableUsed(const char* varName, TACInstr* start) {
+    if (!varName) return 0;
+
+    TACInstr* curr = start;
+    while (curr) {
+        // Check if variable is used in arg1 or arg2
+        if ((curr->arg1 && strcmp(curr->arg1, varName) == 0) ||
+            (curr->arg2 && strcmp(curr->arg2, varName) == 0)) {
+            return 1;
+        }
+
+        // Check if variable is used in special operations
+        switch (curr->op) {
+            case TAC_PRINT:
+            case TAC_RETURN:
+            case TAC_ARG:
+            case TAC_IFZ:
+            case TAC_IF_FALSE:
+            case TAC_ARRAY_ASSIGN:
+            case TAC_ARRAY_ACCESS:
+                if (curr->arg1 && strcmp(curr->arg1, varName) == 0) return 1;
+                break;
+            default:
+                break;
+        }
+
+        curr = curr->next;
+    }
+    return 0;
+}
+
+// Common subexpression elimination - reuse previously computed expressions
+#define MAX_CSE_ENTRIES 100
+typedef struct {
+    TACOp op;
+    char* arg1;
+    char* arg2;
+    char* result;
+} CSEEntry;
+
+static CSEEntry cseTable[MAX_CSE_ENTRIES];
+static int cseCount = 0;
+
+// Find if an expression was already computed
+static char* findCommonSubexpr(TACOp op, const char* arg1, const char* arg2) {
+    for (int i = 0; i < cseCount; i++) {
+        if (cseTable[i].op == op) {
+            int arg1Match = (arg1 == NULL && cseTable[i].arg1 == NULL) ||
+                           (arg1 != NULL && cseTable[i].arg1 != NULL &&
+                            strcmp(arg1, cseTable[i].arg1) == 0);
+            int arg2Match = (arg2 == NULL && cseTable[i].arg2 == NULL) ||
+                           (arg2 != NULL && cseTable[i].arg2 != NULL &&
+                            strcmp(arg2, cseTable[i].arg2) == 0);
+
+            if (arg1Match && arg2Match) {
+                return cseTable[i].result;
+            }
+        }
+    }
+    return NULL;
+}
+
+// Add an expression to the CSE table
+static void addCSEEntry(TACOp op, const char* arg1, const char* arg2, const char* result) {
+    if (cseCount < MAX_CSE_ENTRIES) {
+        cseTable[cseCount].op = op;
+        cseTable[cseCount].arg1 = arg1 ? strdup(arg1) : NULL;
+        cseTable[cseCount].arg2 = arg2 ? strdup(arg2) : NULL;
+        cseTable[cseCount].result = strdup(result);
+        cseCount++;
+    }
+}
+
+// Invalidate CSE entries when a variable is assigned
+static void invalidateCSE(const char* varName) {
+    for (int i = 0; i < cseCount; i++) {
+        if ((cseTable[i].arg1 && strcmp(cseTable[i].arg1, varName) == 0) ||
+            (cseTable[i].arg2 && strcmp(cseTable[i].arg2, varName) == 0) ||
+            (cseTable[i].result && strcmp(cseTable[i].result, varName) == 0)) {
+            // Mark as invalid by setting op to an invalid value
+            cseTable[i].op = -1;
+        }
+    }
+}
+
+// Common subexpression elimination pass
+static void eliminateCommonSubexpressions() {
+    cseCount = 0;
+    TACInstr* curr = optimizedList.head;
+
+    while (curr) {
+        // Check if this is a binary operation
+        if (curr->op == TAC_ADD || curr->op == TAC_SUB ||
+            curr->op == TAC_MUL || curr->op == TAC_DIV) {
+
+            // See if we've already computed this expression
+            char* prevResult = findCommonSubexpr(curr->op, curr->arg1, curr->arg2);
+
+            if (prevResult) {
+                // Replace this instruction with an assignment from the previous result
+                free(curr->arg2);
+                curr->arg2 = NULL;
+                free(curr->arg1);
+                curr->arg1 = strdup(prevResult);
+                curr->op = TAC_ASSIGN;
+                optStats.commonSubexprEliminated++;
+            } else {
+                // Add this expression to the CSE table
+                addCSEEntry(curr->op, curr->arg1, curr->arg2, curr->result);
+            }
+        }
+
+        // Invalidate CSE entries when a variable is assigned
+        if ((curr->op == TAC_ASSIGN || curr->op == TAC_ADD || curr->op == TAC_SUB ||
+             curr->op == TAC_MUL || curr->op == TAC_DIV) && curr->result) {
+            invalidateCSE(curr->result);
+        }
+
+        curr = curr->next;
+    }
+}
+
+// Dead code elimination - remove assignments to variables that are never used
+static void eliminateDeadCode() {
+    TACInstr* curr = optimizedList.head;
+    TACInstr* prev = NULL;
+
+    while (curr) {
+        int shouldRemove = 0;
+
+        // Only consider removing TAC_ASSIGN instructions to temporary variables
+        if (curr->op == TAC_ASSIGN && curr->result &&
+            curr->result[0] == 't' && isdigit(curr->result[1])) {
+            // Check if this temporary is ever used after this point
+            if (!isVariableUsed(curr->result, curr->next)) {
+                shouldRemove = 1;
+                optStats.deadCodeEliminations++;
+            }
+        }
+
+        if (shouldRemove) {
+            // Remove this instruction
+            if (prev) {
+                prev->next = curr->next;
+                if (curr == optimizedList.tail) {
+                    optimizedList.tail = prev;
+                }
+                TACInstr* toFree = curr;
+                curr = curr->next;
+                free(toFree->arg1);
+                free(toFree->arg2);
+                free(toFree->result);
+                free(toFree);
+            } else {
+                // Removing head
+                optimizedList.head = curr->next;
+                if (curr == optimizedList.tail) {
+                    optimizedList.tail = NULL;
+                }
+                TACInstr* toFree = curr;
+                curr = curr->next;
+                free(toFree->arg1);
+                free(toFree->arg2);
+                free(toFree->result);
+                free(toFree);
+            }
+        } else {
+            prev = curr;
+            curr = curr->next;
+        }
+    }
+}
+
 // Enhanced optimization: constant folding, copy propagation, algebraic simplification, and strength reduction
 void optimizeTAC() {
     TACInstr* curr = tacList.head;
-    int valueCount = 0;
+    valueCount = 0;  // Use global valueCount, don't shadow it with local
 
     /* Reset optimization statistics */
     optStats.constantFolds = 0;
@@ -797,24 +986,10 @@ void optimizeTAC() {
             case TAC_ADD:
             {
                 // Check if both operands are constants
-                char* left = curr->arg1;
-                char* right = curr->arg2;
-
-                // Look up values in propagation table (search from most recent)
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (values[i].var && left && strcmp(values[i].var, left) == 0) {
-                        left = values[i].value;
-                        optStats.copyPropagations++;
-                        break;
-                    }
-                }
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (values[i].var && right && strcmp(values[i].var, right) == 0) {
-                        right = values[i].value;
-                        optStats.copyPropagations++;
-                        break;
-                    }
-                }
+                int propagated = 0;
+                char* left = propagateValueTracked(curr->arg1, &propagated);
+                char* right = propagateValueTracked(curr->arg2, &propagated);
+                if (propagated) optStats.copyPropagations++;
 
                 // Constant folding
                 if (isNumeric(left) && isNumeric(right)) {
@@ -850,24 +1025,10 @@ void optimizeTAC() {
 
             case TAC_SUB:
             {
-                char* left = curr->arg1;
-                char* right = curr->arg2;
-
-                // Look up values in propagation table
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (values[i].var && left && strcmp(values[i].var, left) == 0) {
-                        left = values[i].value;
-                        optStats.copyPropagations++;
-                        break;
-                    }
-                }
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (values[i].var && right && strcmp(values[i].var, right) == 0) {
-                        right = values[i].value;
-                        optStats.copyPropagations++;
-                        break;
-                    }
-                }
+                int propagated = 0;
+                char* left = propagateValueTracked(curr->arg1, &propagated);
+                char* right = propagateValueTracked(curr->arg2, &propagated);
+                if (propagated) optStats.copyPropagations++;
 
                 // Constant folding
                 if (isNumeric(left) && isNumeric(right)) {
@@ -897,24 +1058,10 @@ void optimizeTAC() {
 
             case TAC_MUL:
             {
-                char* left = curr->arg1;
-                char* right = curr->arg2;
-
-                // Look up values in propagation table
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (values[i].var && left && strcmp(values[i].var, left) == 0) {
-                        left = values[i].value;
-                        optStats.copyPropagations++;
-                        break;
-                    }
-                }
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (values[i].var && right && strcmp(values[i].var, right) == 0) {
-                        right = values[i].value;
-                        optStats.copyPropagations++;
-                        break;
-                    }
-                }
+                int propagated = 0;
+                char* left = propagateValueTracked(curr->arg1, &propagated);
+                char* right = propagateValueTracked(curr->arg2, &propagated);
+                if (propagated) optStats.copyPropagations++;
 
                 // Constant folding
                 if (isNumeric(left) && isNumeric(right)) {
@@ -964,24 +1111,10 @@ void optimizeTAC() {
 
             case TAC_DIV:
             {
-                char* left = curr->arg1;
-                char* right = curr->arg2;
-
-                // Look up values in propagation table
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (values[i].var && left && strcmp(values[i].var, left) == 0) {
-                        left = values[i].value;
-                        optStats.copyPropagations++;
-                        break;
-                    }
-                }
-                for (int i = valueCount - 1; i >= 0; i--) {
-                    if (values[i].var && right && strcmp(values[i].var, right) == 0) {
-                        right = values[i].value;
-                        optStats.copyPropagations++;
-                        break;
-                    }
-                }
+                int propagated = 0;
+                char* left = propagateValueTracked(curr->arg1, &propagated);
+                char* right = propagateValueTracked(curr->arg2, &propagated);
+                if (propagated) optStats.copyPropagations++;
 
                 // Constant folding
                 if (isNumeric(left) && isNumeric(right) && atoi(right) != 0) {
@@ -1110,16 +1243,9 @@ void optimizeTAC() {
 
             case TAC_PRINT:
             {
-                char* value = curr->arg1;
-
-                // Look up value in propagation table
-                for (int i = valueCount - 1; i >= 0; i--) {  // Search from most recent
-                    if (values[i].var && strcmp(values[i].var, value) == 0) {
-                        value = values[i].value;
-                        optStats.copyPropagations++;
-                        break;
-                    }
-                }
+                int propagated = 0;
+                char* value = propagateValueTracked(curr->arg1, &propagated);
+                if (propagated) optStats.copyPropagations++;
 
                 newInstr = createTAC(TAC_PRINT, value, NULL, NULL);
                 break;
@@ -1316,37 +1442,46 @@ void optimizeTAC() {
         curr = curr->next;
     }
 
+    /* Apply common subexpression elimination */
+    eliminateCommonSubexpressions();
+
+    /* Apply dead code elimination */
+    eliminateDeadCode();
+
     /* Count optimized instructions */
     optStats.instructionsAfter = countInstructions(optimizedList.head);
 }
 
+/* External reference to log_printf from main.c */
+extern void log_printf(const char* format, ...);
+
 /* Print optimization statistics for documentation */
 void printOptimizationStats() {
-    printf("\n");
-    printf("╔════════════════════════════════════════════════════════════╗\n");
-    printf("║          TAC OPTIMIZATION STATISTICS                       ║\n");
-    printf("╠════════════════════════════════════════════════════════════╣\n");
-    printf("║ Instructions Before:          %4d                       ║\n", optStats.instructionsBefore);
-    printf("║ Instructions After:           %4d                       ║\n", optStats.instructionsAfter);
-    printf("║ Instructions Eliminated:      %4d (%.1f%%)               ║\n",
+    log_printf("\n");
+    log_printf("╔════════════════════════════════════════════════════════════╗\n");
+    log_printf("║          TAC OPTIMIZATION STATISTICS                       ║\n");
+    log_printf("╠════════════════════════════════════════════════════════════╣\n");
+    log_printf("║ Instructions Before:          %4d                       ║\n", optStats.instructionsBefore);
+    log_printf("║ Instructions After:           %4d                       ║\n", optStats.instructionsAfter);
+    log_printf("║ Instructions Eliminated:      %4d (%.1f%%)               ║\n",
            optStats.instructionsBefore - optStats.instructionsAfter,
            optStats.instructionsBefore > 0 ?
            100.0 * (optStats.instructionsBefore - optStats.instructionsAfter) / optStats.instructionsBefore : 0.0);
-    printf("╠════════════════════════════════════════════════════════════╣\n");
-    printf("║ OPTIMIZATION BREAKDOWN:                                    ║\n");
-    printf("║ • Constant Folds:             %4d                       ║\n", optStats.constantFolds);
-    printf("║ • Algebraic Simplifications:  %4d                       ║\n", optStats.algebraicSimplifications);
-    printf("║ • Strength Reductions:        %4d                       ║\n", optStats.strengthReductions);
-    printf("║ • Copy Propagations:          %4d                       ║\n", optStats.copyPropagations);
-    printf("║ • Dead Code Eliminations:     %4d                       ║\n", optStats.deadCodeEliminations);
-    printf("║ • Common Subexpr Eliminated:  %4d                       ║\n", optStats.commonSubexprEliminated);
-    printf("╠════════════════════════════════════════════════════════════╣\n");
-    printf("║ Total Optimizations Applied:  %4d                       ║\n",
+    log_printf("╠════════════════════════════════════════════════════════════╣\n");
+    log_printf("║ OPTIMIZATION BREAKDOWN:                                    ║\n");
+    log_printf("║ • Constant Folds:             %4d                       ║\n", optStats.constantFolds);
+    log_printf("║ • Algebraic Simplifications:  %4d                       ║\n", optStats.algebraicSimplifications);
+    log_printf("║ • Strength Reductions:        %4d                       ║\n", optStats.strengthReductions);
+    log_printf("║ • Copy Propagations:          %4d                       ║\n", optStats.copyPropagations);
+    log_printf("║ • Dead Code Eliminations:     %4d                       ║\n", optStats.deadCodeEliminations);
+    log_printf("║ • Common Subexpr Eliminated:  %4d                       ║\n", optStats.commonSubexprEliminated);
+    log_printf("╠════════════════════════════════════════════════════════════╣\n");
+    log_printf("║ Total Optimizations Applied:  %4d                       ║\n",
            optStats.constantFolds + optStats.algebraicSimplifications +
            optStats.strengthReductions + optStats.copyPropagations +
            optStats.deadCodeEliminations + optStats.commonSubexprEliminated);
-    printf("╚════════════════════════════════════════════════════════════╝\n");
-    printf("\n");
+    log_printf("╚════════════════════════════════════════════════════════════╝\n");
+    log_printf("\n");
 }
 
 void printOptimizedTAC() {

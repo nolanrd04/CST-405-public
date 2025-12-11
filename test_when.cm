@@ -1,0 +1,18 @@
+/* Simple test file for WHEN LOOP feature */
+
+void main() {
+    int x = 0;
+    
+    when (x == 5)
+    {
+        println("Done!");
+    }
+    or (x < 5)
+    {
+        println("Not yet!");
+        x = x + 1;
+        break when (x == 5);
+    }
+    
+    println(x);
+}

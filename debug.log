@@ -1,0 +1,2510 @@
+
+╔════════════════════════════════════════════════════════════╗
+║          MINIMAL C COMPILER - EDUCATIONAL VERSION         ║
+╚════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────┐
+│ PHASE 1: LEXICAL & SYNTAX ANALYSIS                       │
+├──────────────────────────────────────────────────────────┤
+│ • Reading source file: comprehensive_test.cm
+│ • Tokenizing input (scanner.l)
+│ • Parsing grammar rules (parser.y)
+│ • Building Abstract Syntax Tree
+└──────────────────────────────────────────────────────────┘
+✓ Parse successful - program is syntactically correct!
+
+┌──────────────────────────────────────────────────────────┐
+│ PHASE 2: ABSTRACT SYNTAX TREE (AST)                      │
+├──────────────────────────────────────────────────────────┤
+│ Tree structure representing the program hierarchy:        │
+└──────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────┐
+│ PHASE 3: INTERMEDIATE CODE GENERATION                    │
+├──────────────────────────────────────────────────────────┤
+│ Three-Address Code (TAC) - simplified instructions:       │
+│ • Each instruction has at most 3 operands                │
+│ • Temporary variables (t0, t1, ...) for expressions      │
+└──────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────┐
+│ PHASE 4: CODE OPTIMIZATION                               │
+├──────────────────────────────────────────────────────────┤
+│ Applying optimizations:                                  │
+│ • Constant folding (evaluate compile-time expressions)   │
+│ • Copy propagation (replace variables with values)       │
+│ • Algebraic simplification (x+0, x*1, x*0, etc.)         │
+│ • Strength reduction (x*2 -> x+x)                        │
+└──────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════╗
+║          TAC OPTIMIZATION STATISTICS                       ║
+╠════════════════════════════════════════════════════════════╣
+║ Instructions Before:           846                       ║
+║ Instructions After:            795                       ║
+║ Instructions Eliminated:        51 (6.0%)               ║
+╠════════════════════════════════════════════════════════════╣
+║ OPTIMIZATION BREAKDOWN:                                    ║
+║ • Constant Folds:               54                       ║
+║ • Algebraic Simplifications:     3                       ║
+║ • Strength Reductions:           3                       ║
+║ • Copy Propagations:            72                       ║
+║ • Dead Code Eliminations:       51                       ║
+║ • Common Subexpr Eliminated:     0                       ║
+╠════════════════════════════════════════════════════════════╣
+║ Total Optimizations Applied:   183                       ║
+╚════════════════════════════════════════════════════════════╝
+
+
+┌──────────────────────────────────────────────────────────┐
+│ PHASE 5: MIPS CODE GENERATION                            │
+├──────────────────────────────────────────────────────────┤
+│ Translating to MIPS assembly:                            │
+│ • Variables stored on stack                              │
+│ • Using $t0-$t7 for temporary values                     │
+│ • System calls for print operations                      │
+└──────────────────────────────────────────────────────────┘
+[DEBUG] ===== Starting MIPS Code Generation =====
+[DEBUG] Output file opened: output.s
+[DEBUG] Symbol table initialized
+[DEBUG] Collecting strings...
+[DEBUG] String collection complete. Found 26 strings
+[DEBUG] Writing .data section
+[DEBUG] Collecting global variables...
+[DEBUG] Found global variable: globalCounter
+[DEBUG] Found global array: globalArray[20]
+[DEBUG] Found global variable: globalResult
+[DEBUG] Global variable collection complete
+[DEBUG] Collecting global functions...
+[DEBUG] Found 37 functions
+[DEBUG] Writing .globl directives
+[DEBUG] .globl testArithmetic
+[DEBUG] .globl testRelational
+[DEBUG] .globl testIfElse
+[DEBUG] .globl testWhileLoop
+[DEBUG] .globl testNestedLoops
+[DEBUG] .globl testArrayOperations
+[DEBUG] .globl sumArray
+[DEBUG] .globl factorial
+[DEBUG] .globl fibonacci
+[DEBUG] .globl power
+[DEBUG] .globl gcd
+[DEBUG] .globl linearSearch
+[DEBUG] .globl bubbleSort
+[DEBUG] .globl findMax
+[DEBUG] .globl findMin
+[DEBUG] .globl isPrime
+[DEBUG] .globl countPrimes
+[DEBUG] .globl reverseArray
+[DEBUG] .globl testComplexExpressions
+[DEBUG] .globl testVoidFunction
+[DEBUG] .globl printArray
+[DEBUG] .globl multiply3
+[DEBUG] .globl add4
+[DEBUG] .globl max3
+[DEBUG] .globl fillArray
+[DEBUG] .globl copyArray
+[DEBUG] .globl arrayEqual
+[DEBUG] .globl absoluteValue
+[DEBUG] .globl sign
+[DEBUG] .globl sumOfSquares
+[DEBUG] .globl sumOfCubes
+[DEBUG] .globl calculateMean
+[DEBUG] .globl countOccurrences
+[DEBUG] .globl leftShift
+[DEBUG] .globl rightShift
+[DEBUG] .globl arrayLength
+[DEBUG] .globl main
+[DEBUG] Starting statement generation...
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=globalCounter, scope=0
+[DEBUG] Skipping global variable: globalCounter (globals not supported on stack)
+[DEBUG] genStmt: Processing node type 12
+[DEBUG] NODE_ARRAY_DECL: array=globalArray, size=20, type=NULL, scope=0
+[DEBUG] Skipping global array: globalArray (globals not supported on stack)
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=globalResult, scope=0
+[DEBUG] Skipping global variable: globalResult (globals not supported on stack)
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: testArithmetic
+[DEBUG] Loading parameters for function testArithmetic
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: a (type: int)
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: b (type: int)
+[DEBUG] Generating function body for testArithmetic
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=sum, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=diff, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=prod, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=quot, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=complex, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for testArithmetic
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: testRelational
+[DEBUG] Loading parameters for function testRelational
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: x (type: int)
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: y (type: int)
+[DEBUG] Generating function body for testRelational
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=result, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for testRelational
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: testIfElse
+[DEBUG] Loading parameters for function testIfElse
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] Found 1 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: value (type: int)
+[DEBUG] Generating function body for testIfElse
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=result, scope=1
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for testIfElse
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: testWhileLoop
+[DEBUG] Loading parameters for function testWhileLoop
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] Found 1 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: n (type: int)
+[DEBUG] Generating function body for testWhileLoop
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=sum, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for testWhileLoop
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: testNestedLoops
+[DEBUG] Loading parameters for function testNestedLoops
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: rows (type: int)
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: cols (type: int)
+[DEBUG] Generating function body for testNestedLoops
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=total, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=j, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for testNestedLoops
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: testArrayOperations
+[DEBUG] Loading parameters for function testArrayOperations
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: arr (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: size (type: int)
+[DEBUG] Generating function body for testArrayOperations
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] Finished generating function body for testArrayOperations
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: sumArray
+[DEBUG] Loading parameters for function sumArray
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: arr (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: size (type: int)
+[DEBUG] Generating function body for sumArray
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=sum, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for sumArray
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: factorial
+[DEBUG] Loading parameters for function factorial
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] Found 1 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: n (type: int)
+[DEBUG] Generating function body for factorial
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=result, scope=1
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for factorial
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: fibonacci
+[DEBUG] Loading parameters for function fibonacci
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] Found 1 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: n (type: int)
+[DEBUG] Generating function body for fibonacci
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=result, scope=1
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for fibonacci
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: power
+[DEBUG] Loading parameters for function power
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: base (type: int)
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: exp (type: int)
+[DEBUG] Generating function body for power
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=result, scope=1
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for power
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: gcd
+[DEBUG] Loading parameters for function gcd
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: a (type: int)
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: b (type: int)
+[DEBUG] Generating function body for gcd
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=remainder, scope=1
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for gcd
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: linearSearch
+[DEBUG] Loading parameters for function linearSearch
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 3
+[DEBUG] Found 3 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: arr (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: size (type: int)
+[DEBUG] Processing param 2
+[DEBUG] Processing parameter: target (type: int)
+[DEBUG] Generating function body for linearSearch
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=found, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for linearSearch
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: bubbleSort
+[DEBUG] Loading parameters for function bubbleSort
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: arr (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: size (type: int)
+[DEBUG] Generating function body for bubbleSort
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=j, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=temp, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] Finished generating function body for bubbleSort
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: findMax
+[DEBUG] Loading parameters for function findMax
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: arr (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: size (type: int)
+[DEBUG] Generating function body for findMax
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=max, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for findMax
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: findMin
+[DEBUG] Loading parameters for function findMin
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: arr (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: size (type: int)
+[DEBUG] Generating function body for findMin
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=min, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for findMin
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: isPrime
+[DEBUG] Loading parameters for function isPrime
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] Found 1 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: n (type: int)
+[DEBUG] Generating function body for isPrime
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=result, scope=1
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for isPrime
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: countPrimes
+[DEBUG] Loading parameters for function countPrimes
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] Found 1 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: limit (type: int)
+[DEBUG] Generating function body for countPrimes
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=count, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for countPrimes
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: reverseArray
+[DEBUG] Loading parameters for function reverseArray
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: arr (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: size (type: int)
+[DEBUG] Generating function body for reverseArray
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=left, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=right, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=temp, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] Finished generating function body for reverseArray
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: testComplexExpressions
+[DEBUG] Loading parameters for function testComplexExpressions
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 3
+[DEBUG] Found 3 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: a (type: int)
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: b (type: int)
+[DEBUG] Processing param 2
+[DEBUG] Processing parameter: c (type: int)
+[DEBUG] Generating function body for testComplexExpressions
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=result, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for testComplexExpressions
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: testVoidFunction
+[DEBUG] Loading parameters for function testVoidFunction
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] Found 1 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: x (type: int)
+[DEBUG] Generating function body for testVoidFunction
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=y, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for testVoidFunction
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: printArray
+[DEBUG] Loading parameters for function printArray
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: arr (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: size (type: int)
+[DEBUG] Generating function body for printArray
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] Finished generating function body for printArray
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: multiply3
+[DEBUG] Loading parameters for function multiply3
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 3
+[DEBUG] Found 3 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: a (type: int)
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: b (type: int)
+[DEBUG] Processing param 2
+[DEBUG] Processing parameter: c (type: int)
+[DEBUG] Generating function body for multiply3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for multiply3
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: add4
+[DEBUG] Loading parameters for function add4
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 3
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 4
+[DEBUG] Found 4 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: a (type: int)
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: b (type: int)
+[DEBUG] Processing param 2
+[DEBUG] Processing parameter: c (type: int)
+[DEBUG] Processing param 3
+[DEBUG] Processing parameter: d (type: int)
+[DEBUG] Generating function body for add4
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for add4
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: max3
+[DEBUG] Loading parameters for function max3
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 3
+[DEBUG] Found 3 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: a (type: int)
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: b (type: int)
+[DEBUG] Processing param 2
+[DEBUG] Processing parameter: c (type: int)
+[DEBUG] Generating function body for max3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=max, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for max3
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: fillArray
+[DEBUG] Loading parameters for function fillArray
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 3
+[DEBUG] Found 3 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: arr (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: size (type: int)
+[DEBUG] Processing param 2
+[DEBUG] Processing parameter: value (type: int)
+[DEBUG] Generating function body for fillArray
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] Finished generating function body for fillArray
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: copyArray
+[DEBUG] Loading parameters for function copyArray
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 3
+[DEBUG] Found 3 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: source (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: dest (type: int[])
+[DEBUG] Processing param 2
+[DEBUG] Processing parameter: size (type: int)
+[DEBUG] Generating function body for copyArray
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] Finished generating function body for copyArray
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: arrayEqual
+[DEBUG] Loading parameters for function arrayEqual
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 3
+[DEBUG] Found 3 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: arr1 (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: arr2 (type: int[])
+[DEBUG] Processing param 2
+[DEBUG] Processing parameter: size (type: int)
+[DEBUG] Generating function body for arrayEqual
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=equal, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for arrayEqual
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: absoluteValue
+[DEBUG] Loading parameters for function absoluteValue
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] Found 1 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: x (type: int)
+[DEBUG] Generating function body for absoluteValue
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=result, scope=1
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for absoluteValue
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: sign
+[DEBUG] Loading parameters for function sign
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] Found 1 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: x (type: int)
+[DEBUG] Generating function body for sign
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=result, scope=1
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for sign
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: sumOfSquares
+[DEBUG] Loading parameters for function sumOfSquares
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] Found 1 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: n (type: int)
+[DEBUG] Generating function body for sumOfSquares
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=sum, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for sumOfSquares
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: sumOfCubes
+[DEBUG] Loading parameters for function sumOfCubes
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] Found 1 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: n (type: int)
+[DEBUG] Generating function body for sumOfCubes
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=sum, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for sumOfCubes
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: calculateMean
+[DEBUG] Loading parameters for function calculateMean
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: arr (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: size (type: int)
+[DEBUG] Generating function body for calculateMean
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=sum, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for calculateMean
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: countOccurrences
+[DEBUG] Loading parameters for function countOccurrences
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 3
+[DEBUG] Found 3 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: arr (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: size (type: int)
+[DEBUG] Processing param 2
+[DEBUG] Processing parameter: value (type: int)
+[DEBUG] Generating function body for countOccurrences
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=count, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for countOccurrences
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: leftShift
+[DEBUG] Loading parameters for function leftShift
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: n (type: int)
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: bits (type: int)
+[DEBUG] Generating function body for leftShift
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=result, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for leftShift
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: rightShift
+[DEBUG] Loading parameters for function rightShift
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: n (type: int)
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: bits (type: int)
+[DEBUG] Generating function body for rightShift
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=result, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for rightShift
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: arrayLength
+[DEBUG] Loading parameters for function arrayLength
+[DEBUG] flattenParams: node type 22
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 1
+[DEBUG] flattenParams: node type 21
+[DEBUG] Added param, total: 2
+[DEBUG] Found 2 parameters
+[DEBUG] Processing param 0
+[DEBUG] Processing parameter: arr (type: int[])
+[DEBUG] Processing param 1
+[DEBUG] Processing parameter: maxSize (type: int)
+[DEBUG] Generating function body for arrayLength
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=length, scope=1
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 9
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 24
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] Finished generating function body for arrayLength
+[DEBUG] genStmt: Processing node type 20
+[DEBUG] Processing function: main
+[DEBUG] Loading parameters for function main
+[DEBUG] Found 0 parameters
+[DEBUG] Generating function body for main
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 12
+[DEBUG] NODE_ARRAY_DECL: array=testArray, size=10, type=NULL, scope=1
+[DEBUG] About to call addArrayVar...
+[DEBUG] addArrayVar returned offset: 4
+[DEBUG] genStmt: Processing node type 12
+[DEBUG] NODE_ARRAY_DECL: array=testArray2, size=10, type=NULL, scope=1
+[DEBUG] About to call addArrayVar...
+[DEBUG] addArrayVar returned offset: 44
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=i, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=result, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=a, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=b, scope=1
+[DEBUG] genStmt: Processing node type 5
+[DEBUG] NODE_DECL: var=choice, scope=1
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 36
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 23
+[DEBUG] genStmt: Processing node type 10
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 6
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 13
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 3
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 4
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genExpr: Processing node type 14
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 7
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 37
+[DEBUG] genStmt: Processing node type 25
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] genStmt: Processing node type 8
+[DEBUG] genExpr: Processing node type 0
+[DEBUG] Finished generating function body for main
+[DEBUG] Statement generation complete!
+[DEBUG] Closing output file
+[DEBUG] ===== MIPS Code Generation Complete =====
+✓ MIPS assembly code generated to: output.s
+
+╔════════════════════════════════════════════════════════════╗
+║                  COMPILATION SUCCESSFUL!                   ║
+║         Run the output file in a MIPS simulator           ║
+╚════════════════════════════════════════════════════════════╝
+
+
+╔════════════════════════════════════════════════════════════╗
+║              PERFORMANCE OPTIMIZATION STATS                ║
+╚════════════════════════════════════════════════════════════╝
+
+=== Symbol Table Hash Table Statistics ===
+Total lookups: 547
+Hash collisions: 2
+Collision rate: 0.37%
+Variables stored: 3
+Hash table size: 211 buckets
+
+=== String Pool Statistics ===
+Total requests: 0
+Unique strings: 0
+Duplicates avoided: 0
+Memory used: 0.00 KB / 16.00 KB
+Memory saved: ~0.00 KB
+

@@ -6,11 +6,19 @@
 #include "tac.h"
 
 /* DEBUG OUTPUT CONTROL - Set to 0 to disable all debug messages */
-#define ENABLE_DEBUG_OUTPUT 0
+#define ENABLE_DEBUG_OUTPUT 1
+
+/* External reference to log file from main.c */
+extern FILE* log_file;
 
 /* Debug print macro - only prints if ENABLE_DEBUG_OUTPUT is 1 */
 #if ENABLE_DEBUG_OUTPUT
-    #define DEBUG_PRINT(...) fprintf(stderr, __VA_ARGS__)
+    #define DEBUG_PRINT(...) do { \
+        if (log_file) { \
+            fprintf(log_file, __VA_ARGS__); \
+            fflush(log_file); \
+        } \
+    } while(0)
 #else
     #define DEBUG_PRINT(...) do {} while(0)
 #endif
